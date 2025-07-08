@@ -77,5 +77,4 @@ npm run web        # Chạy trên web
 - Cách dễ nhất là sử dụng ứng dụng Expo Go trên điện thoại
 
 ## Tác giả
-
 Tran Dang Duc
