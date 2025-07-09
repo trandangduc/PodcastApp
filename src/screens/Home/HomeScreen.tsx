@@ -2,108 +2,129 @@ import React from 'react';
 import {
   View,
   Text,
+  FlatList,
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation';
+import { Ionicons } from '@expo/vector-icons';
 
-type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
+const featuredPodcasts = [
+  {
+    id: '1',
+    title: 'Hành trình khởi nghiệp',
+    thumbnail: 'https://i1.sndcdn.com/artworks-000658424191-16fudx-t500x500.jpg',
+  },
+  {
+    id: '2',
+    title: 'Tư duy phản biện',
+    thumbnail: 'https://i1.sndcdn.com/artworks-000605790204-gcdh3f-t500x500.jpg',
+  },
+  {
+    id: '3',
+    title: 'Học kỹ năng sống',
+    thumbnail: 'https://i1.sndcdn.com/artworks-000433896052-b3t18q-t500x500.jpg',
+  },
+];
 
-const HomeScreen = ({ navigation }: HomeScreenProps) => {
-  const handleLogout = () => {
-    // Đăng xuất và quay về màn hình Login
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
-  };
+const categories = [
+  { id: '1', name: 'Giáo dục', icon: 'school-outline' },
+  { id: '2', name: 'Công nghệ', icon: 'hardware-chip-outline' },
+  { id: '3', name: 'Kỹ năng', icon: 'construct-outline' },
+  { id: '4', name: 'Giải trí', icon: 'musical-notes-outline' },
+  { id: '5', name: 'Sức khoẻ', icon: 'fitness-outline' },
+  { id: '6', name: 'Tin tức', icon: 'newspaper-outline' },
+];
 
-  const navigateToScreen = (screenName: keyof RootStackParamList) => {
-    navigation.navigate(screenName as any);
-  };
+const HomeScreen = () => {
+  const renderPodcast = ({ item }: any) => (
+    <TouchableOpacity style={styles.podcastCard}>
+      <Image source={{ uri: item.thumbnail }} style={styles.podcastImage} />
+      <Text style={styles.podcastTitle}>{item.title}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderCategory = ({ item }: any) => (
+    <TouchableOpacity style={styles.categoryCard}>
+      <Ionicons name={item.icon} size={24} color="#4CAF50" />
+      <Text style={styles.categoryText}>{item.name}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderHeader = () => (
+    <View>
+      <Text style={styles.sectionTitle}>Podcast nổi bật</Text>
+      <FlatList
+        data={featuredPodcasts}
+        keyExtractor={(item) => item.id}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        renderItem={renderPodcast}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+      />
+
+      <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Danh mục</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Chào mừng đến với PodcastApp</Text>
-          <Text style={styles.subtitle}>Trang chủ đang được phát triển...</Text>
-        </View>
-
-
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutButtonText}>Đăng xuất</Text>
-        </TouchableOpacity>
-      </View>
+      <FlatList
+        data={categories}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        renderItem={renderCategory}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
+      />
     </SafeAreaView>
   );
 };
+
+export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a1a',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 50,
-  },
-  logo: {
-    fontSize: 64,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    width: '100%',
-    marginBottom: 50,
-  },
-  navButton: {
-    backgroundColor: '#2d2d2d',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    alignItems: 'center',
-  },
-  buttonText: {
+  sectionTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 24,
+    marginBottom: 12,
+    marginHorizontal: 16,
+  },
+  podcastCard: {
+    marginRight: 16,
+    width: 140,
+  },
+  podcastImage: {
+    width: '100%',
+    height: 140,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  podcastTitle: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
-  logoutButton: {
-    backgroundColor: '#d32f2f',
+  categoryCard: {
+    flex: 1 / 3,
+    backgroundColor: '#2d2d2d',
+    margin: 6,
+    paddingVertical: 20,
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoutButtonText: {
+  categoryText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
-
-export default HomeScreen;
