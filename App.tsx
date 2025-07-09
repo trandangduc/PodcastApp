@@ -1,42 +1,57 @@
 import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { RootStackParamList } from './src/navigation';
+// Import các screens
+import LoginScreen from './src/screens/Auth/LoginScreen';
+import HomeScreen from './src/screens/Home/HomeScreen';
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Podcast App</Text>
-      <Text style={styles.subtitle}>Setup hoàn thành - APP-001</Text>
-      <Text style={styles.info}>Cấu trúc folder đã tạo </Text>
-      <Text style={styles.info}>Dependencies đã cài </Text>
-      <Text style={styles.info}>Types đã định nghĩa </Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <StatusBar style="light" />
+      <Stack.Navigator
+        initialRouteName="Login"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#1a1a1a',
+          },
+          headerTintColor: '#4CAF50',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+          headerBackTitle: '', // Ẩn back title cho iOS
+        }}
+      >
+        {/* Auth Screens */}
+        <Stack.Screen 
+          name="Login" 
+          component={LoginScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
+      {/*   <Stack.Screen 
+          name="Register" 
+          component={RegisterScreen}
+          options={{
+            headerShown: false,
+          }}
+        />*/}
+        
+        {/* Main App Screens */}
+        <Stack.Screen 
+          name="Home" 
+          component={HomeScreen}
+          options={{
+            title: 'Trang chủ',
+            headerLeft: () => null, // Ẩn nút back
+          }}
+        />
+      
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#2196F3',
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 20,
-  },
-  info: {
-    fontSize: 14,
-    color: '#4CAF50',
-    marginBottom: 5,
-  },
-});
