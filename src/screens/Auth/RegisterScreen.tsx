@@ -14,7 +14,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import apiClient from '../../services/api/auth'; // Đường dẫn tới apiClient
+import apiClient from '../../services/api/auth'; // axios instance
 
 type RegisterScreenProps = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -22,11 +22,12 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
@@ -41,11 +42,16 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       return;
     }
 
+    if (password !== confirmPassword) {
+      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await apiClient.post('/auth/register', {
         ho_ten: fullName,
-        email: email,
+        email,
         mat_khau: password,
       });
 
@@ -137,6 +143,23 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               </View>
             </View>
 
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Xác nhận mật khẩu</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="checkmark-circle" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nhập lại mật khẩu"
+                  placeholderTextColor="#666"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!isPasswordVisible}
+                  autoCapitalize="none"
+                  editable={!isLoading}
+                />
+              </View>
+            </View>
+
             <TouchableOpacity
               style={[styles.loginButton, isLoading && styles.disabledButton]}
               onPress={handleRegister}
@@ -161,18 +184,9 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, backgroundColor: '#1a1a1a' },
+  keyboardAvoidingView: { flex: 1 },
+  scrollContainer: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20 },
   formContainer: {
     backgroundColor: '#2d2d2d',
     borderRadius: 20,
@@ -188,9 +202,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
-  inputContainer: {
-    marginBottom: 20,
-  },
+  inputContainer: { marginBottom: 20 },
   label: {
     fontSize: 16,
     color: '#4CAF50',
@@ -206,18 +218,14 @@ const styles = StyleSheet.create({
     borderColor: '#444',
     paddingHorizontal: 16,
   },
-  inputIcon: {
-    marginRight: 12,
-  },
+  inputIcon: { marginRight: 12 },
   input: {
     flex: 1,
     paddingVertical: 16,
     fontSize: 16,
     color: '#fff',
   },
-  eyeButton: {
-    padding: 8,
-  },
+  eyeButton: { padding: 8 },
   loginButton: {
     backgroundColor: '#4CAF50',
     borderRadius: 12,
@@ -238,15 +246,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 12,
   },
-  signUpText: {
-    color: '#999',
-    fontSize: 14,
-  },
-  signUpLink: {
-    color: '#4CAF50',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  signUpText: { color: '#999', fontSize: 14 },
+  signUpLink: { color: '#4CAF50', fontSize: 14, fontWeight: '600' },
 });
 
 export default RegisterScreen;
