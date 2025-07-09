@@ -14,6 +14,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import apiClient from '../../services/api/auth'; // Đường dẫn tới apiClient
 
 type RegisterScreenProps = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -21,12 +22,11 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!fullName || !email || !password) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
@@ -41,21 +41,26 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       return;
     }
 
-    if (password !== confirmPassword) {
-      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      // Giả lập gọi API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await apiClient.post('/auth/register', {
+        ho_ten: fullName,
+        email: email,
+        mat_khau: password,
+      });
 
-      console.log('Đăng ký thành công:', { fullName, email, password });
-      Alert.alert('Thành công', 'Tạo tài khoản thành công!');
-      navigation.replace('Login');
-    } catch (error) {
-      Alert.alert('Lỗi', 'Đăng ký thất bại');
+      if (response.status === 201 || response.status === 200) {
+        Alert.alert('Thành công', 'Tạo tài khoản thành công!');
+        navigation.replace('Login');
+      } else {
+        Alert.alert('Lỗi', 'Đăng ký không thành công');
+      }
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert(
+        'Lỗi',
+        error?.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -123,29 +128,12 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
                   onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                   disabled={isLoading}
                 >
-                  <Ionicons 
-                    name={isPasswordVisible ? "eye-off" : "eye"} 
-                    size={20} 
-                    color="#4CAF50" 
+                  <Ionicons
+                    name={isPasswordVisible ? 'eye-off' : 'eye'}
+                    size={20}
+                    color="#4CAF50"
                   />
                 </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Xác nhận mật khẩu</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="checkmark-circle" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nhập lại mật khẩu"
-                  placeholderTextColor="#666"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!isPasswordVisible}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
               </View>
             </View>
 
