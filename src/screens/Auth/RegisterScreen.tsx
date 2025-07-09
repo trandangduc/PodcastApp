@@ -26,14 +26,20 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [emailError, setEmailError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
   const handleRegister = async () => {
+    setEmailError('');
+    setConfirmPasswordError('');
+
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('Lỗi', 'Email không hợp lệ');
+      setEmailError('Email không hợp lệ');
       return;
     }
 
@@ -43,7 +49,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
+      setConfirmPasswordError('Mật khẩu xác nhận không khớp');
       return;
     }
 
@@ -62,11 +68,14 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
         Alert.alert('Lỗi', 'Đăng ký không thành công');
       }
     } catch (error: any) {
-      console.error(error);
-      Alert.alert(
-        'Lỗi',
-        error?.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.'
-      );
+      console.log('Registration error:', error);
+      const errorMessage = error?.response?.data?.message?.toLowerCase();
+
+      if (errorMessage?.includes('email')) {
+        setEmailError('Email đã được sử dụng');
+      } else {
+        Alert.alert('Lỗi', 'Email đã được sử dụng');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -113,6 +122,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
                   editable={!isLoading}
                 />
               </View>
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
@@ -158,6 +168,9 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
                   editable={!isLoading}
                 />
               </View>
+              {confirmPasswordError ? (
+                <Text style={styles.errorText}>{confirmPasswordError}</Text>
+              ) : null}
             </View>
 
             <TouchableOpacity
@@ -248,6 +261,12 @@ const styles = StyleSheet.create({
   },
   signUpText: { color: '#999', fontSize: 14 },
   signUpLink: { color: '#4CAF50', fontSize: 14, fontWeight: '600' },
+  errorText: {
+    color: 'red',
+    marginTop: 4,
+    marginLeft: 8,
+    fontSize: 13,
+  },
 });
 
 export default RegisterScreen;
