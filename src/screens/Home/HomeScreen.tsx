@@ -7,8 +7,13 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Image,
+  Alert,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import authService from '../../services/api/authService';
 
 const featuredPodcasts = [
   {
@@ -37,7 +42,48 @@ const categories = [
   { id: '6', name: 'Tin tức', icon: 'newspaper-outline' },
 ];
 
-const HomeScreen = () => {
+const HomeScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const [user, setUser] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await authService.getUser();
+        setUser(userData);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+    loadUserData();
+  }, []);
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất không?',
+      [
+        {
+          text: 'Hủy',
+          style: 'cancel',
+        },
+        {
+          text: 'Đăng xuất',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await authService.logout();
+              authService.removeAuthHeader();
+              // AppNavigator sẽ tự động chuyển về Auth khi check lại
+            } catch (error) {
+              Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderPodcast = ({ item }: any) => (
     <TouchableOpacity style={styles.podcastCard}>
       <Image source={{ uri: item.thumbnail }} style={styles.podcastImage} />
@@ -54,6 +100,24 @@ const HomeScreen = () => {
 
   const renderHeader = () => (
     <View>
+      {/* User welcome section */}
+      <View style={[
+        styles.welcomeContainer, 
+        { marginTop: insets.top + 16 } // Add safe area top + padding
+      ]}>
+        <View>
+          <Text style={styles.welcomeText}>
+            Chào mừng, {user?.ho_ten || 'Người dùng'}!
+          </Text>
+          <Text style={styles.userRole}>
+            {user?.vai_tro === 'admin' ? 'Quản trị viên' : 'Người dùng'}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
       <Text style={styles.sectionTitle}>Podcast nổi bật</Text>
       <FlatList
         data={featuredPodcasts}
@@ -63,31 +127,58 @@ const HomeScreen = () => {
         renderItem={renderPodcast}
         contentContainerStyle={{ paddingHorizontal: 16 }}
       />
-
       <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Danh mục</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }]}>
+      <StatusBar backgroundColor="#1a1a1a" barStyle="light-content" />
       <FlatList
         data={categories}
         keyExtractor={(item) => item.id}
         numColumns={3}
         renderItem={renderCategory}
         ListHeaderComponent={renderHeader}
-        contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 100 }}
+        contentContainerStyle={{ 
+          paddingHorizontal: 8, 
+          paddingBottom: insets.bottom + 100 // Add safe area bottom + tab bar space
+        }}
+        showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 };
-
-export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a1a',
+  },
+  welcomeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 16,
+    backgroundColor: '#2d2d2d',
+    borderRadius: 12,
+  },
+  welcomeText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  userRole: {
+    color: '#4CAF50',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  logoutButton: {
+    padding: 8,
+    backgroundColor: '#444',
+    borderRadius: 8,
   },
   sectionTitle: {
     color: '#fff',
@@ -128,3 +219,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default HomeScreen;

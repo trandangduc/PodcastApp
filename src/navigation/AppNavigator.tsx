@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
 import { RootStackParamList } from './types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import authService from '../services/api/authService';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -12,11 +12,28 @@ const AppNavigator = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = await AsyncStorage.getItem('accessToken');
-      setIsAuthenticated(!!token); // nếu có token thì đăng nhập
+      try {
+        const authenticated = await authService.isAuthenticated();
+        
+        if (authenticated) {
+          const token = await authService.getToken();
+          if (token) {
+            authService.setAuthHeader(token);
+          }
+        }
+        
+        setIsAuthenticated(authenticated);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+      }
     };
 
     checkAuth();
+
+    // Re-check authentication every few seconds
+    const interval = setInterval(checkAuth, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   if (isAuthenticated === null) return null; // loading...

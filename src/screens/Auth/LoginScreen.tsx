@@ -10,10 +10,12 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Switch,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { Ionicons, MaterialIcons, AntDesign } from '@expo/vector-icons';
+import authService from '../../services/api/authService';
 
 type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -22,26 +24,61 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const validateForm = (): boolean => {
+    setEmailError('');
+    setPasswordError('');
+    
+    let isValid = true;
+
+    if (!email.trim()) {
+      setEmailError('Vui lòng nhập email');
+      isValid = false;
+    } else if (!email.includes('@')) {
+      setEmailError('Email không hợp lệ');
+      isValid = false;
+    }
+
+    if (!password.trim()) {
+      setPasswordError('Vui lòng nhập mật khẩu');
+      isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự');
+      isValid = false;
+    }
+
+    return isValid;
+  };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email và mật khẩu');
+    if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Giả lập đăng nhập thành công
-      console.log('Đăng nhập thành công:', { email, password });
-      
-      // Chuyển đến màn hình Home
-      navigation.replace('Home');
-    } catch (error) {
-      Alert.alert('Lỗi', 'Đăng nhập thất bại. Vui lòng thử lại.');
+      // Call login API
+      const loginData = await authService.login({
+        email: email.trim(),
+        mat_khau: password,
+      });
+
+      // Save auth data to AsyncStorage
+      await authService.saveAuthData(loginData.token, loginData.user, rememberMe);
+
+      // Set authorization header for subsequent requests
+      authService.setAuthHeader(loginData.token);
+
+      // Success - AppNavigator will automatically detect the token and switch to TabNavigator
+      Alert.alert('Thành công', 'Đăng nhập thành công!');
+
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Lỗi', error.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +93,6 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
   };
 
   const handleSignUp = () => {
-    // Chuyển đến màn hình đăng ký
     navigation.navigate('Register');
   };
 
@@ -87,13 +123,17 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                   placeholder="Nhập email của bạn"
                   placeholderTextColor="#666"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (emailError) setEmailError('');
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
                 />
               </View>
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
             </View>
 
             <View style={styles.inputContainer}>
@@ -105,7 +145,10 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                   placeholder="Nhập mật khẩu"
                   placeholderTextColor="#666"
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (passwordError) setPasswordError('');
+                  }}
                   secureTextEntry={!isPasswordVisible}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -123,6 +166,19 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                   />
                 </TouchableOpacity>
               </View>
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+            </View>
+
+            {/* Remember Me Toggle */}
+            <View style={styles.rememberMeContainer}>
+              <Text style={styles.rememberMeText}>Ghi nhớ đăng nhập</Text>
+              <Switch
+                value={rememberMe}
+                onValueChange={setRememberMe}
+                trackColor={{ false: '#444', true: '#4CAF50' }}
+                thumbColor={rememberMe ? '#fff' : '#999'}
+                disabled={isLoading}
+              />
             </View>
 
             <TouchableOpacity
@@ -166,6 +222,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                 <Text style={styles.socialButtonText}>Đăng nhập với Google</Text>
               </View>
             </TouchableOpacity>
+
             <View style={styles.signUpContainer}>
               <Text style={styles.signUpText}>Chưa có tài khoản? </Text>
               <TouchableOpacity onPress={handleSignUp} disabled={isLoading}>
@@ -248,6 +305,16 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 8,
   },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  rememberMeText: {
+    color: '#fff',
+    fontSize: 16,
+  },
   forgotPasswordButton: {
     alignSelf: 'flex-end',
     marginBottom: 24,
@@ -273,9 +340,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  buttonIcon: {
-    marginRight: 8,
   },
   loadingIcon: {
     marginRight: 8,
@@ -334,6 +398,12 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 14,
     fontWeight: '600',
+  },
+  errorText: {
+    color: '#ff4444',
+    marginTop: 4,
+    marginLeft: 8,
+    fontSize: 13,
   },
 });
 

@@ -1,10 +1,8 @@
-// src/navigation/AuthNavigator.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RootStackParamList } from './index';
+import { RootStackParamList } from './types';
 import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
-import HomeScreen from '../screens/Home/HomeScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -23,7 +21,6 @@ const AuthNavigator = () => {
         headerBackTitle: '',
       }}
     >
-      {/* Auth Screens */}
       <Stack.Screen 
         name="Login" 
         component={LoginScreen}
@@ -33,16 +30,6 @@ const AuthNavigator = () => {
         name="Register" 
         component={RegisterScreen}
         options={{ headerShown: false }}
-      />
-
-      {/* Main App Screens */}
-      <Stack.Screen 
-        name="Home" 
-        component={HomeScreen}
-        options={{
-          title: 'Trang chủ',
-          headerLeft: () => null,
-        }}
       />
     </Stack.Navigator>
   );
