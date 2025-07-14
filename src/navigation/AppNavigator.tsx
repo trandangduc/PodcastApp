@@ -7,6 +7,7 @@ import authService from '../services/api/authService';
 
 // IMPORT màn hình chi tiết hồ sơ
 import DetailsProfileScreen from '../screens/Profile/DetailsProfileScreen';
+import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -43,6 +44,8 @@ const AppNavigator = () => {
         <>
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="DetailsProfileScreen" component={DetailsProfileScreen} />
+          <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+
         </>
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />

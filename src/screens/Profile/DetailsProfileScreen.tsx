@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   SafeAreaView,
   ScrollView,
@@ -14,6 +15,7 @@ import { getProfile } from '../../services/api/profileService';
 const DetailsProfileScreen = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -44,9 +46,8 @@ const DetailsProfileScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Thông Tin Cá Nhân</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')}>
           <Feather name="edit" size={22} color="#fff" style={styles.editIcon} />
-          
         </TouchableOpacity>
       </View>
 
