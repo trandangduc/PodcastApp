@@ -159,6 +159,34 @@ class AuthService {
       console.error('Error setting up auto login:', error);
     }
   }
+
+    // Register API call
+  async register({
+    ho_ten,
+    email,
+    mat_khau,
+  }: {
+    ho_ten: string;
+    email: string;
+    mat_khau: string;
+  }): Promise<any> {
+    try {
+      const response = await auth.post('/auth/register', {
+        ho_ten,
+        email,
+        mat_khau,
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 400 && error.response?.data?.message?.toLowerCase().includes('email')) {
+        throw new Error('Email đã được sử dụng');
+      }
+      throw new Error('Đăng ký không thành công. Vui lòng thử lại.');
+    }
+  }
+
+
+  
 }
 
 export default new AuthService();

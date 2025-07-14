@@ -14,7 +14,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import apiClient from '../../services/api/auth'; // axios instance
+import authService from '../../services/api/authService'; // ✅ đã tách xử lý
 
 type RegisterScreenProps = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -55,26 +55,20 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
 
     setIsLoading(true);
     try {
-      const response = await apiClient.post('/auth/register', {
+      await authService.register({
         ho_ten: fullName,
         email,
         mat_khau: password,
       });
 
-      if (response.status === 201 || response.status === 200) {
-        Alert.alert('Thành công', 'Tạo tài khoản thành công!');
-        navigation.replace('Login');
-      } else {
-        Alert.alert('Lỗi', 'Đăng ký không thành công');
-      }
+      Alert.alert('Thành công', 'Tạo tài khoản thành công!');
+      navigation.replace('Login');
     } catch (error: any) {
-      console.log('Registration error:', error);
-      const errorMessage = error?.response?.data?.message?.toLowerCase();
-
-      if (errorMessage?.includes('email')) {
-        setEmailError('Email đã được sử dụng');
+      const message = error.message || 'Đăng ký thất bại';
+      if (message.includes('Email')) {
+        setEmailError(message);
       } else {
-        Alert.alert('Lỗi', 'Email đã được sử dụng');
+        Alert.alert('Lỗi', message);
       }
     } finally {
       setIsLoading(false);
