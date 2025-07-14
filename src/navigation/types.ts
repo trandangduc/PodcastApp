@@ -8,4 +8,6 @@ export type RootStackParamList = {
   Search: undefined;
   Favorites: undefined;
   Profile: undefined;
+  DetailsProfileScreen: undefined;
+  EditProfileScreen: undefined;
 };
