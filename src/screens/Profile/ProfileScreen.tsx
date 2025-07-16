@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
+import { useIsFocused } from '@react-navigation/native';
+
 import {
   View,
   Text,
@@ -19,20 +21,27 @@ const ProfileScreen: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const userData = await authService.getUser();
-        setUser(userData);
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const isFocused = useIsFocused();
 
+useEffect(() => {
+  const loadUserData = async () => {
+    try {
+      const userData = await authService.getUser();
+      setUser(userData);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isFocused) {
+    if (!user) setIsLoading(true); // chỉ loading khi chưa có user
     loadUserData();
-  }, []);
+  }
+}, [isFocused]);
+
+
 
   const handleLogout = async () => {
     Alert.alert(
@@ -78,7 +87,7 @@ const ProfileScreen: React.FC = () => {
       id: '2',
       title: 'Cài đặt',
       icon: 'settings-outline',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
+      onPress: () => navigation.navigate('AccountSettingsScreen'),
     },
     {
       id: '3',

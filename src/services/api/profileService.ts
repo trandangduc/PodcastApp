@@ -28,3 +28,14 @@ export const getProfile = async (): Promise<UserProfile> => {
     }
   }
 };
+
+export const updateProfile = async (
+  data: Pick<UserProfile, 'ho_ten' | 'email'>
+): Promise<{ message: string }> => {
+  try {
+    const response = await auth.put('/users/profile', data);
+    return response.data;
+  } catch (error: any) {
+    throw error; 
+  }
+};

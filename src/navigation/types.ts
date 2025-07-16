@@ -10,4 +10,6 @@ export type RootStackParamList = {
   Profile: undefined;
   DetailsProfileScreen: undefined;
   EditProfileScreen: undefined;
+  AccountSettingsScreen: undefined;
+  AccountSecurityScreen: undefined;
 };

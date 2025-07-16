@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import authService from '../../services/api/authService';
 
 const featuredPodcasts = [
@@ -44,9 +45,10 @@ const categories = [
 
 const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const [user, setUser] = React.useState<any>(null);
+  const isFocused = useIsFocused();
+  const [user, setUser] = useState<any>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const loadUserData = async () => {
       try {
         const userData = await authService.getUser();
@@ -55,18 +57,18 @@ const HomeScreen: React.FC = () => {
         console.error('Error loading user data:', error);
       }
     };
-    loadUserData();
-  }, []);
+
+    if (isFocused) {
+      loadUserData();
+    }
+  }, [isFocused]);
 
   const handleLogout = async () => {
     Alert.alert(
       'Đăng xuất',
       'Bạn có chắc chắn muốn đăng xuất không?',
       [
-        {
-          text: 'Hủy',
-          style: 'cancel',
-        },
+        { text: 'Hủy', style: 'cancel' },
         {
           text: 'Đăng xuất',
           style: 'destructive',
@@ -74,7 +76,7 @@ const HomeScreen: React.FC = () => {
             try {
               await authService.logout();
               authService.removeAuthHeader();
-              // AppNavigator sẽ tự động chuyển về Auth khi check lại
+              // AppNavigator sẽ kiểm tra và điều hướng lại
             } catch (error) {
               Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
             }
@@ -101,10 +103,7 @@ const HomeScreen: React.FC = () => {
   const renderHeader = () => (
     <View>
       {/* User welcome section */}
-      <View style={[
-        styles.welcomeContainer, 
-        { marginTop: insets.top + 16 } // Add safe area top + padding
-      ]}>
+      <View style={[styles.welcomeContainer, { marginTop: insets.top + 16 }]}>
         <View>
           <Text style={styles.welcomeText}>
             Chào mừng, {user?.ho_ten || 'Người dùng'}!
@@ -140,9 +139,9 @@ const HomeScreen: React.FC = () => {
         numColumns={3}
         renderItem={renderCategory}
         ListHeaderComponent={renderHeader}
-        contentContainerStyle={{ 
-          paddingHorizontal: 8, 
-          paddingBottom: insets.bottom + 100 // Add safe area bottom + tab bar space
+        contentContainerStyle={{
+          paddingHorizontal: 8,
+          paddingBottom: insets.bottom + 100,
         }}
         showsVerticalScrollIndicator={false}
       />
