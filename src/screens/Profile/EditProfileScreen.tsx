@@ -38,6 +38,8 @@ const EditProfileScreen = () => {
     fetchUser();
   }, []);
 
+  const isChanged = hoTen !== user?.ho_ten || email !== user?.email;
+
   const handleSave = async () => {
     if (!hoTen || !email) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ họ tên và email');
@@ -74,8 +76,12 @@ const EditProfileScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Chỉnh sửa hồ sơ</Text>
-        <TouchableOpacity onPress={handleSave} disabled={submitting}>
-          <Feather name="save" size={22} color="#fff" style={styles.editIcon} />
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={!isChanged || submitting}
+          style={{ opacity: isChanged ? 1 : 0.3 }}
+        >
+          <Feather name="save" size={22} color="#4CAF50" style={styles.editIcon} />
         </TouchableOpacity>
       </View>
 
@@ -85,24 +91,47 @@ const EditProfileScreen = () => {
         </View>
 
         <View style={styles.formSection}>
-          <InputItem label="Họ tên" value={hoTen} onChangeText={setHoTen} />
-          <InputItem label="Email" value={email} onChangeText={setEmail} />
+          <InputItem
+            label="Họ tên"
+            value={hoTen}
+            onChangeText={setHoTen}
+            icon={<Feather name="user" size={20} color="#4CAF50" style={{ marginRight: 8 }} />}
+          />
+          <InputItem
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            icon={<Feather name="mail" size={20} color="#4CAF50" style={{ marginRight: 8 }} />}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const InputItem = ({ label, value, onChangeText }: any) => (
+const InputItem = ({
+  label,
+  value,
+  onChangeText,
+  icon,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  icon: React.ReactNode;
+}) => (
   <View style={styles.inputContainer}>
     <Text style={styles.label}>{label}</Text>
-    <TextInput
-      style={styles.input}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={`Nhập ${label.toLowerCase()}`}
-      placeholderTextColor="#888"
-    />
+    <View style={styles.inputWrapper}>
+      {icon}
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={`Nhập ${label.toLowerCase()}`}
+        placeholderTextColor="#888"
+      />
+    </View>
   </View>
 );
 
@@ -159,12 +188,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#3a3a3a',
-    color: '#fff',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  input: {
+    flex: 1,
+    color: '#fff',
     fontSize: 16,
   },
 });

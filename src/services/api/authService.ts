@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth from './auth';
+import { getProfile } from './profileService'; // 👈 Gọi từ API mới nhất
 
 export interface LoginRequest {
   email: string;
@@ -20,15 +21,13 @@ export interface AuthError {
   error: string;
 }
 
-// Constants for AsyncStorage keys
 const STORAGE_KEYS = {
-  TOKEN: 'accessToken', 
+  TOKEN: 'accessToken',
   USER: 'userData',
   REMEMBER_ME: 'rememberMe',
 } as const;
 
 class AuthService {
-  // Login API call
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
       const response = await auth.post<LoginResponse>('/auth/login', credentials);
@@ -44,7 +43,6 @@ class AuthService {
     }
   }
 
-  // Save token and user data to AsyncStorage
   async saveAuthData(token: string, user: any, rememberMe: boolean): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token);
@@ -56,7 +54,6 @@ class AuthService {
     }
   }
 
-  // Get stored token
   async getToken(): Promise<string | null> {
     try {
       return await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
@@ -66,18 +63,18 @@ class AuthService {
     }
   }
 
-  // Get stored user data
+  // ❗ FIX: Lấy user từ server mới nhất
   async getUser(): Promise<any | null> {
     try {
-      const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER);
-      return userData ? JSON.parse(userData) : null;
+      const profile = await getProfile(); // gọi API mới nhất
+      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profile)); // cập nhật lại
+      return profile;
     } catch (error) {
-      console.error('Error getting user data:', error);
+      console.error('Error fetching user profile:', error);
       return null;
     }
   }
 
-  // Check if user should be remembered
   async getRememberMe(): Promise<boolean> {
     try {
       const rememberMe = await AsyncStorage.getItem(STORAGE_KEYS.REMEMBER_ME);
@@ -88,14 +85,12 @@ class AuthService {
     }
   }
 
-  // Check if user is authenticated
   async isAuthenticated(): Promise<boolean> {
     try {
       const token = await this.getToken();
-      
+
       if (!token) return false;
-      
-      // Check if token is expired
+
       const isExpired = this.isTokenExpired(token);
       if (isExpired) {
         const rememberMe = await this.getRememberMe();
@@ -104,7 +99,7 @@ class AuthService {
           return false;
         }
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error checking authentication:', error);
@@ -112,7 +107,6 @@ class AuthService {
     }
   }
 
-  // Check if token is expired
   private isTokenExpired(token: string): boolean {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -124,7 +118,6 @@ class AuthService {
     }
   }
 
-  // Logout - clear all stored data
   async logout(): Promise<void> {
     try {
       await AsyncStorage.multiRemove([
@@ -138,17 +131,14 @@ class AuthService {
     }
   }
 
-  // Set authorization header for API requests
   setAuthHeader(token: string): void {
     auth.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
-  // Remove authorization header
   removeAuthHeader(): void {
     delete auth.defaults.headers.common['Authorization'];
   }
 
-  // Auto-login setup
   async setupAutoLogin(): Promise<void> {
     try {
       const token = await this.getToken();
@@ -160,33 +150,11 @@ class AuthService {
     }
   }
 
-    // Register API call
-  async register({
-    ho_ten,
-    email,
-    mat_khau,
-  }: {
-    ho_ten: string;
-    email: string;
-    mat_khau: string;
-  }): Promise<any> {
-    try {
-      const response = await auth.post('/auth/register', {
-        ho_ten,
-        email,
-        mat_khau,
-      });
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 400 && error.response?.data?.message?.toLowerCase().includes('email')) {
-        throw new Error('Email đã được sử dụng');
-      }
-      throw new Error('Đăng ký không thành công. Vui lòng thử lại.');
-    }
+  // Optional: Nếu bạn muốn cập nhật lại local sau khi sửa thông tin
+  async refreshUser(): Promise<void> {
+    const updated = await this.getUser();
+    await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
   }
-
-
-  
 }
 
 export default new AuthService();

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import {
   SafeAreaView,
   ScrollView,
@@ -10,16 +9,19 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { getProfile } from '../../services/api/profileService';
 
 const DetailsProfileScreen = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+  const isFocused = useIsFocused(); // ✅ Hook để detect khi màn hình được focus
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        setLoading(true);
         const res = await getProfile();
         setUser(res);
       } catch (error) {
@@ -28,8 +30,11 @@ const DetailsProfileScreen = () => {
         setLoading(false);
       }
     };
-    fetchUser();
-  }, []);
+
+    if (isFocused) {
+      fetchUser();
+    }
+  }, [isFocused]); // ✅ chạy lại khi màn hình được focus
 
   if (loading) {
     return (
