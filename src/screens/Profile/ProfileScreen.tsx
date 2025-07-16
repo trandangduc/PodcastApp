@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation';
 import {
   View,
   Text,
@@ -70,7 +72,7 @@ const ProfileScreen: React.FC = () => {
       id: '1',
       title: 'Thông tin cá nhân',
       icon: 'person-outline',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
+      onPress: () => navigation.navigate('DetailsProfileScreen'),
     },
     {
       id: '2',
