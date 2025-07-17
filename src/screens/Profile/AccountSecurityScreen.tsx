@@ -2,47 +2,72 @@ import React from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   Switch,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 
-const AccountSecurityScreen = () => {
+const SettingsScreen = () => {
   const navigation = useNavigation();
-  const [fastLogin, setFastLogin] = React.useState(false);
-
-  const handleToggleFastLogin = () => {
-    setFastLogin((prev) => !prev);
-  };
+  const { logout } = useAuth();
 
   const sections = [
     {
-      title: 'Tài Khoản',
-      items: [
-        { label: 'Hồ sơ của tôi' },
-        { label: 'Tên người dùng', value: 'btmhuongmh' },
-        { label: 'Điện thoại', value: '*****55' },
-        { label: 'Email nhận hóa đơn', value: 'm*********2@gmail.com' },
-        { label: 'Tài khoản mạng xã hội' },
-        { label: 'Đổi mật khẩu' },
-        { label: 'Đăng nhập nhanh', isSwitch: true },
+      title: 'Tài khoản',
+      data: [
+        {
+          title: 'Thông tin cá nhân',
+          icon: 'person-outline',
+          onPress: () => navigation.navigate('DetailsProfileScreen'),
+        },
+        {
+          title: 'Đổi mật khẩu',
+          icon: 'lock-closed-outline',
+          onPress: () => navigation.navigate('ChangePasswordScreen'),
+        },
+        {
+          title: 'Tài khoản liên kết',
+          icon: 'link-outline',
+          onPress: () => navigation.navigate('SocialAccountsScreen'),
+        },
       ],
     },
     {
-      title: 'Bảo Mật',
-      items: [
+      title: 'Cài đặt ứng dụng',
+      data: [
         {
-          label: 'Kiểm tra hoạt động của tài khoản',
-          sub: 'Kiểm tra những lần đăng nhập và thay đổi tài khoản trong 30 ngày',
+          title: 'Thông báo',
+          icon: 'notifications-outline',
+          isSwitch: true,
+          switchValue: true,
+          onToggle: (value: boolean) => {
+            console.log('Thông báo:', value);
+          },
         },
         {
-          label: 'Quản lý thiết bị đăng nhập',
-          sub: 'Quản lý các thiết bị đã đăng nhập vào tài khoản',
-          dot: true,
+          title: 'Chế độ tối',
+          icon: 'moon-outline',
+          isSwitch: true,
+          switchValue: false,
+          onToggle: (value: boolean) => {
+            console.log('Dark mode:', value);
+          },
+        },
+      ],
+    },
+    {
+      title: 'Khác',
+      data: [
+        {
+          title: 'Đăng xuất',
+          icon: 'log-out-outline',
+          onPress: () => logout(),
+          danger: true,
         },
       ],
     },
@@ -51,46 +76,52 @@ const AccountSecurityScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Tài khoản & Bảo mật</Text>
-        </View>
+        <Text style={styles.header}>Thiết lập tài khoản</Text>
 
-        {/* Sections */}
         {sections.map((section, index) => (
           <View key={index}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            {section.items.map((item, idx) => (
+            {section.data.map((item, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={styles.item}
+                style={[
+                  styles.item,
+                  item.danger && { backgroundColor: '#ff4444' },
+                ]}
                 activeOpacity={item.isSwitch ? 1 : 0.7}
                 onPress={() => {
-                  if (!item.isSwitch) {
-                    // TODO: handle navigation
-                  }
+                  if (!item.isSwitch && item.onPress) item.onPress();
                 }}
               >
                 <View style={styles.itemLeft}>
-                  <Text style={styles.itemText}>{item.label}</Text>
-                  {item.value && <Text style={styles.itemValue}>{item.value}</Text>}
-                  {item.sub && <Text style={styles.itemSub}>{item.sub}</Text>}
+                  <Ionicons
+                    name={item.icon as any}
+                    size={22}
+                    color={item.danger ? '#fff' : '#4CAF50'}
+                  />
+                  <Text
+                    style={[
+                      styles.itemText,
+                      item.danger && { color: '#fff', fontWeight: 'bold' },
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
                 </View>
+
                 {item.isSwitch ? (
                   <Switch
-                    value={fastLogin}
-                    onValueChange={handleToggleFastLogin}
+                    value={item.switchValue}
+                    onValueChange={item.onToggle}
                     trackColor={{ false: '#555', true: '#4CAF50' }}
                     thumbColor="#fff"
                   />
                 ) : (
-                  <View style={styles.itemRight}>
-                    {item.dot && <View style={styles.dot} />}
-                    <Ionicons name="chevron-forward" size={20} color="#aaa" />
-                  </View>
+                  <Ionicons
+                    name="chevron-forward-outline"
+                    size={18}
+                    color="#aaa"
+                  />
                 )}
               </TouchableOpacity>
             ))}
@@ -101,72 +132,46 @@ const AccountSecurityScreen = () => {
   );
 };
 
+export default SettingsScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a1a',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: 20,
+    fontWeight: '600',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  headerTitle: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 12,
+    borderBottomColor: '#333',
+    borderBottomWidth: 1,
   },
   sectionTitle: {
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 8,
-    color: '#aaa',
+    color: '#888',
     fontSize: 13,
-    fontWeight: '500',
   },
   item: {
-    backgroundColor: '#2d2d2d',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    backgroundColor: '#2d2d2d',
   },
   itemLeft: {
-    flex: 1,
-  },
-  itemText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  itemValue: {
-    color: '#ccc',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  itemSub: {
-    color: '#aaa',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  itemRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  dot: {
-    width: 8,
-    height: 8,
-    backgroundColor: 'red',
-    borderRadius: 4,
-    marginRight: 8,
+  itemText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#fff',
   },
 });
-
-export default AccountSecurityScreen;

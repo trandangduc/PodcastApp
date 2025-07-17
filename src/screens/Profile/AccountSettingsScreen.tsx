@@ -17,17 +17,18 @@ const AccountSettingsScreen = () => {
   const sections = [
     {
       title: 'Tài khoản của tôi',
-  data: [
-    {
-      title: 'Tài khoản & Bảo mật',
-      icon: 'shield-checkmark-outline',
-      onPress: () => navigation.navigate('AccountSecurityScreen'),
-    },
-    {
-      title: 'Địa chỉ',
-      icon: 'location-outline',
-    },
-  ],
+      data: [
+        {
+          title: 'Tài khoản & Bảo mật',
+          icon: 'shield-checkmark-outline',
+          onPress: () => navigation.navigate('AccountSecurityScreen'),
+        }, 
+        {
+          title: 'Địa chỉ',
+          icon: 'location-outline',
+          onPress: () => Alert.alert('Thông báo', 'Chức năng đang phát triển'),
+        },
+      ],
     },
     {
       title: 'Cài đặt',
@@ -36,7 +37,11 @@ const AccountSettingsScreen = () => {
         { title: 'Cài đặt Thông báo', icon: 'notifications-outline' },
         { title: 'Cài đặt riêng tư', icon: 'lock-closed-outline' },
         { title: 'Người dùng đã bị chặn', icon: 'close-circle-outline' },
-        { title: 'Ngôn ngữ / Language', icon: 'language-outline', note: 'Tiếng Việt' },
+        {
+          title: 'Ngôn ngữ / Language',
+          icon: 'language-outline',
+          note: 'Tiếng Việt',
+        },
       ],
     },
     {
@@ -45,7 +50,10 @@ const AccountSettingsScreen = () => {
         { title: 'Trung tâm hỗ trợ', icon: 'help-buoy-outline' },
         { title: 'Tiêu chuẩn cộng đồng', icon: 'people-outline' },
         { title: 'Điều khoản sử dụng', icon: 'document-text-outline' },
-        { title: 'Hài lòng với ứng dụng? Hãy đánh giá ngay!', icon: 'star-outline' },
+        {
+          title: 'Hài lòng với ứng dụng? Hãy đánh giá ngay!',
+          icon: 'star-outline',
+        },
         { title: 'Giới thiệu', icon: 'information-circle-outline' },
         { title: 'Yêu cầu huỷ tài khoản', icon: 'trash-outline' },
       ],
@@ -53,21 +61,16 @@ const AccountSettingsScreen = () => {
   ];
 
   const handleLogout = () => {
-    Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc chắn muốn đăng xuất không?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Đăng xuất',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: Thêm logic đăng xuất
-            navigation.navigate('Auth');
-          },
+    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất không?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: () => {
+          navigation.navigate('Auth');
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -79,21 +82,30 @@ const AccountSettingsScreen = () => {
           <View key={index}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             {section.data.map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.item}>
+              <TouchableOpacity
+                key={idx}
+                style={styles.item}
+                onPress={item.onPress ?? (() => {})} // fix: gọi onPress nếu có
+              >
                 <View style={styles.itemLeft}>
                   <Ionicons name={item.icon as any} size={22} color="#4CAF50" />
                   <Text style={styles.itemText}>{item.title}</Text>
                 </View>
                 <View style={styles.itemRight}>
-                  {item.note && <Text style={styles.noteText}>{item.note}</Text>}
-                  <Ionicons name="chevron-forward-outline" size={18} color="#aaa" />
+                  {item.note && (
+                    <Text style={styles.noteText}>{item.note}</Text>
+                  )}
+                  <Ionicons
+                    name="chevron-forward-outline"
+                    size={18}
+                    color="#aaa"
+                  />
                 </View>
               </TouchableOpacity>
             ))}
           </View>
         ))}
 
-        {/* Đăng xuất */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#fff" />
           <Text style={styles.logoutText}>Đăng xuất</Text>

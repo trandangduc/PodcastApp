@@ -10,6 +10,7 @@ import DetailsProfileScreen from '../screens/Profile/DetailsProfileScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import AccountSettingsScreen from '../screens/Profile/AccountSettingsScreen';
 import AccountSecurityScreen from '../screens/Profile/AccountSecurityScreen';
+import ChangePasswordScreen from '../screens/Profile/ChangePasswordScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -49,6 +50,7 @@ const AppNavigator = () => {
           <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
           <Stack.Screen name="AccountSettingsScreen" component={AccountSettingsScreen} />
           <Stack.Screen name="AccountSecurityScreen" component={AccountSecurityScreen} />
+          <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
         </>
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
