@@ -1,3 +1,4 @@
+// AppNavigator.tsx - Updated
 import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthNavigator from './AuthNavigator';
@@ -11,6 +12,11 @@ import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import AccountSettingsScreen from '../screens/Profile/AccountSettingsScreen';
 import AccountSecurityScreen from '../screens/Profile/AccountSecurityScreen';
 import ChangePasswordScreen from '../screens/Profile/ChangePasswordScreen';
+
+// IMPORT màn hình podcast mới
+import PodcastListScreen from '../screens/Podcast/PodcastListScreen';
+import PodcastDetailScreen from '../screens/Podcast/PodcastDetailScreen';
+import FavoritesScreen from '../screens/Favorites/FavoritesScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -46,11 +52,18 @@ const AppNavigator = () => {
       {isAuthenticated ? (
         <>
           <Stack.Screen name="Main" component={TabNavigator} />
+          
+          {/* Profile Screens */}
           <Stack.Screen name="DetailsProfileScreen" component={DetailsProfileScreen} />
           <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
           <Stack.Screen name="AccountSettingsScreen" component={AccountSettingsScreen} />
           <Stack.Screen name="AccountSecurityScreen" component={AccountSecurityScreen} />
           <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
+          
+          {/* Podcast Screens */}
+          <Stack.Screen name="PodcastList" component={PodcastListScreen} />
+          <Stack.Screen name="PodcastDetail" component={PodcastDetailScreen} />
+          <Stack.Screen name="Favorites" component={FavoritesScreen} />
         </>
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />

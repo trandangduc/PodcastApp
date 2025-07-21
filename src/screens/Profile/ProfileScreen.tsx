@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { useIsFocused } from '@react-navigation/native';
-
 import {
   View,
   Text,
@@ -14,34 +13,34 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { CommonActions, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import authService from '../../services/api/authService';
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 const ProfileScreen: React.FC = () => {
-  const navigation = useNavigation();
+  // Thêm type cho navigation
+  const navigation = useNavigation<NavigationProp>();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-
   const isFocused = useIsFocused();
 
-useEffect(() => {
-  const loadUserData = async () => {
-    try {
-      const userData = await authService.getUser();
-      setUser(userData);
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await authService.getUser();
+        setUser(userData);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (isFocused) {
+      if (!user) setIsLoading(true); // chỉ loading khi chưa có user
+      loadUserData();
     }
-  };
-
-  if (isFocused) {
-    if (!user) setIsLoading(true); // chỉ loading khi chưa có user
-    loadUserData();
-  }
-}, [isFocused]);
-
-
+  }, [isFocused]);
 
   const handleLogout = async () => {
     Alert.alert(

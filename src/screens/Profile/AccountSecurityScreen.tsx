@@ -10,13 +10,46 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
+import { RootStackParamList } from '../../navigation';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Định nghĩa base interface
+interface BaseSettingsItem {
+  title: string;
+  icon: string;
+  danger?: boolean;
+}
+
+// Interface cho item có onPress
+interface PressableItem extends BaseSettingsItem {
+  isSwitch?: false;
+  onPress: () => void | Promise<void>;
+}
+
+// Interface cho item có switch
+interface SwitchItem extends BaseSettingsItem {
+  isSwitch: true;
+  switchValue: boolean;
+  onToggle: (value: boolean) => void;
+}
+
+// Union type
+type SettingsItem = PressableItem | SwitchItem;
+
+// Interface cho section
+interface SettingsSection {
+  title: string;
+  data: SettingsItem[];
+}
 
 const SettingsScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { logout } = useAuth();
 
-  const sections = [
+  const sections: SettingsSection[] = [
     {
       title: 'Tài khoản',
       data: [
@@ -33,7 +66,7 @@ const SettingsScreen = () => {
         {
           title: 'Tài khoản liên kết',
           icon: 'link-outline',
-          onPress: () => navigation.navigate('SocialAccountsScreen'),
+          onPress: () => alert('Thông báo Tính năng đang phát triển'),
         },
       ],
     },
@@ -77,7 +110,6 @@ const SettingsScreen = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <Text style={styles.header}>Thiết lập tài khoản</Text>
-
         {sections.map((section, index) => (
           <View key={index}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -86,42 +118,39 @@ const SettingsScreen = () => {
                 key={idx}
                 style={[
                   styles.item,
-                  item.danger && { backgroundColor: '#ff4444' },
+                  item.danger && styles.dangerItem
                 ]}
-                activeOpacity={item.isSwitch ? 1 : 0.7}
                 onPress={() => {
-                  if (!item.isSwitch && item.onPress) item.onPress();
+                  if (!item.isSwitch && 'onPress' in item) {
+                    item.onPress();
+                  }
                 }}
+                disabled={item.isSwitch}
               >
                 <View style={styles.itemLeft}>
-                  <Ionicons
-                    name={item.icon as any}
-                    size={22}
-                    color={item.danger ? '#fff' : '#4CAF50'}
+                  <Ionicons 
+                    name={item.icon as any} 
+                    size={24} 
+                    color={item.danger ? "#ff4444" : "#4CAF50"} 
                   />
-                  <Text
+                  <Text 
                     style={[
                       styles.itemText,
-                      item.danger && { color: '#fff', fontWeight: 'bold' },
+                      item.danger && styles.dangerText
                     ]}
                   >
                     {item.title}
                   </Text>
                 </View>
-
                 {item.isSwitch ? (
                   <Switch
                     value={item.switchValue}
                     onValueChange={item.onToggle}
-                    trackColor={{ false: '#555', true: '#4CAF50' }}
-                    thumbColor="#fff"
+                    trackColor={{ false: '#767577', true: '#4CAF50' }}
+                    thumbColor={item.switchValue ? '#fff' : '#f4f3f4'}
                   />
                 ) : (
-                  <Ionicons
-                    name="chevron-forward-outline"
-                    size={18}
-                    color="#aaa"
-                  />
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
                 )}
               </TouchableOpacity>
             ))}
@@ -131,8 +160,6 @@ const SettingsScreen = () => {
     </SafeAreaView>
   );
 };
-
-export default SettingsScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -165,6 +192,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#333',
     backgroundColor: '#2d2d2d',
   },
+  dangerItem: {
+    backgroundColor: '#2d1f1f',
+  },
   itemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -174,4 +204,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
   },
+  dangerText: {
+    color: '#ff4444',
+  },
 });
+
+export default SettingsScreen;

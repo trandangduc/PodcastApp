@@ -11,11 +11,13 @@ import {
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { getProfile } from '../../services/api/profileService';
-
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const DetailsProfileScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const navigation = useNavigation();
   const isFocused = useIsFocused(); // ✅ Hook để detect khi màn hình được focus
 
   useEffect(() => {
