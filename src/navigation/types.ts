@@ -16,8 +16,8 @@ export type RootStackParamList = {
   AudioPlayerScreen: { podcastId: string };
   Search: undefined;
   Favorites: undefined;
+  HistoryScreen: undefined;
 
-  
   // Profile screens
   Profile: undefined;
   DetailsProfileScreen: undefined;

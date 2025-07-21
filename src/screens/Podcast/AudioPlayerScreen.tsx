@@ -1,3 +1,4 @@
+// 👇 Những phần đầu giữ nguyên như bạn đã viết
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -16,6 +17,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import podcastService from '../../services/api/podcastService';
 import { Podcast } from '../../types';
+import { saveToHistory } from '../../services/api/historyService';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -37,7 +39,6 @@ const AudioPlayerScreen: React.FC = () => {
   const [isShuffle, setIsShuffle] = useState(false);
 
   const sound = useRef<Audio.Sound | null>(null);
-
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const rotateLoop = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -52,8 +53,17 @@ const AudioPlayerScreen: React.FC = () => {
   const loadPodcast = async () => {
     try {
       const res = await podcastService.getPodcastById(podcastId);
-      setPodcast(res.data);
-      await playAudio(res.data.duong_dan_audio);
+      const episode = res.data;
+      setPodcast(episode);
+      await playAudio(episode.duong_dan_audio);
+
+      // ✅ Lưu vào lịch sử
+      await saveToHistory({
+        id: episode.id,
+        title: episode.tieu_de,
+        image: episode.hinh_anh_dai_dien,
+        audioUri: episode.duong_dan_audio,
+      });
     } catch (err) {
       console.error('Error loading podcast:', err);
     } finally {
@@ -87,7 +97,7 @@ const AudioPlayerScreen: React.FC = () => {
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
 
-    if (status.didJustFinish) {
+    if (status.didJustFinish && !isRepeat) {
       setIsPlaying(false);
       setPosition(0);
       stopRotation();
@@ -106,6 +116,20 @@ const AudioPlayerScreen: React.FC = () => {
       setIsPlaying(true);
       startRotation();
     }
+  };
+
+  const skipBack = async () => {
+    if (!sound.current) return;
+    const status = await sound.current.getStatusAsync();
+    const newPosition = Math.max(0, status.positionMillis - 15000); // 15s
+    await sound.current.setPositionAsync(newPosition);
+  };
+
+  const skipForward = async () => {
+    if (!sound.current) return;
+    const status = await sound.current.getStatusAsync();
+    const newPosition = Math.min(status.durationMillis, status.positionMillis + 15000);
+    await sound.current.setPositionAsync(newPosition);
   };
 
   const handleSeek = async (value: number) => {
@@ -214,13 +238,13 @@ const AudioPlayerScreen: React.FC = () => {
             <TouchableOpacity onPress={toggleShuffle}>
               <Ionicons name="shuffle" size={24} color={isShuffle ? '#4CAF50' : '#ccc'} />
             </TouchableOpacity>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={skipBack}>
               <Ionicons name="play-skip-back" size={32} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.playButton} onPress={togglePlayback}>
               <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={skipForward}>
               <Ionicons name="play-skip-forward" size={32} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity onPress={toggleRepeat}>
@@ -258,6 +282,7 @@ const AudioPlayerScreen: React.FC = () => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

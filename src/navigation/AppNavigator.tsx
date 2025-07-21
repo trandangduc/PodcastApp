@@ -18,6 +18,7 @@ import PodcastListScreen from '../screens/Podcast/PodcastListScreen';
 import PodcastDetailScreen from '../screens/Podcast/PodcastDetailScreen';
 import FavoritesScreen from '../screens/Favorites/FavoritesScreen';
 import AudioPlayerScreen from '../screens/Podcast/AudioPlayerScreen';
+import HistoryScreen from '../screens/Podcast/HistoryScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -66,6 +67,8 @@ const AppNavigator = () => {
           <Stack.Screen name="PodcastDetail" component={PodcastDetailScreen} />
           <Stack.Screen name="Favorites" component={FavoritesScreen} />
           <Stack.Screen name="AudioPlayerScreen" component={AudioPlayerScreen} />
+          <Stack.Screen name="HistoryScreen" component={HistoryScreen} />
+
           
           {/* Other Screens */}
         </>

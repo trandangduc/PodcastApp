@@ -98,7 +98,7 @@ const ProfileScreen: React.FC = () => {
       id: '4',
       title: 'Lịch sử nghe',
       icon: 'time-outline',
-      onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
+      onPress: () => navigation.navigate('HistoryScreen'),
     },
     {
       id: '5',

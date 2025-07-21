@@ -72,6 +72,11 @@ export type RootStackParamList = {
   PodcastDetail: {
     podcastId: string;
   };
+  AudioPlayerScreen: {
+    episode?: any;
+    podcastId?: string;
+  };
+  History: undefined;
   Favorites: undefined;
 };
 
