@@ -13,8 +13,10 @@ export type RootStackParamList = {
   PodcastDetail: { 
     podcastId: string; // Changed from number to string
   };
+  AudioPlayerScreen: { podcastId: string };
   Search: undefined;
   Favorites: undefined;
+
   
   // Profile screens
   Profile: undefined;

@@ -108,8 +108,9 @@ const PodcastDetailScreen: React.FC = () => {
   };
 
   const handlePlay = () => {
-    Alert.alert('Phát nhạc', 'Chức năng phát nhạc sẽ được thêm vào sau');
-  };
+  navigation.navigate('AudioPlayerScreen', { podcastId: podcast?.id });
+};
+
 
   const handleSuggestedPodcastPress = useCallback((suggestedPodcast: Podcast) => {
     navigation.push('PodcastDetail', { podcastId: suggestedPodcast.id });
