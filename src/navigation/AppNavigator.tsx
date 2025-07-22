@@ -1,11 +1,10 @@
-// AppNavigator.tsx - FIXED
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
 import { RootStackParamList } from './types';
-import { useAuth } from '../contexts/AuthContext'; // Import useAuth
+import { useAuth } from '../contexts/AuthContext';
 
 // IMPORT màn hình chi tiết hồ sơ
 import DetailsProfileScreen from '../screens/Profile/DetailsProfileScreen';
