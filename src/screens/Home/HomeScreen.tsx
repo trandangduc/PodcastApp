@@ -1,3 +1,4 @@
+// HomeScreen.tsx - FIXED
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
@@ -22,7 +23,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
-import authService from '../../services/api/authService';
+import { useAuth } from '../../contexts/AuthContext'; // ← THÊM IMPORT NÀY
 import podcastService from '../../services/api/podcastService';
 import categoriesService from '../../services/api/categoriesService';
 import debounce from 'lodash.debounce';
@@ -37,7 +38,7 @@ const categoriesPerRow = isTablet ? 3 : 2;
 const categoryCardWidth: DimensionValue = `${100 / categoriesPerRow - 2}%`;
 
 // Performance constants
-const ITEM_HEIGHT = isTablet ? 110 : 92; // Estimated height for getItemLayout
+const ITEM_HEIGHT = isTablet ? 110 : 92;
 const WINDOW_SIZE = 10;
 const INITIAL_NUM_TO_RENDER = 8;
 
@@ -56,9 +57,11 @@ const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
+  
+  // ✅ SỬ DỤNG AuthContext thay vì authService trực tiếp
+  const { user, isAuthenticated, logout } = useAuth();
 
   // States
-  const [user, setUser] = useState<any>(null);
   const [searchText, setSearchText] = useState('');
   const [featuredPodcasts, setFeaturedPodcasts] = useState<FeaturedPodcast[]>([]);
   const [recommendedPodcasts, setRecommendedPodcasts] = useState<Podcast[]>([]);
@@ -73,25 +76,18 @@ const HomeScreen: React.FC = () => {
   // Animation for modal
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
+  // ✅ CHỈ LOAD DATA KHI ĐÃ AUTHENTICATED
   useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const userData = await authService.getUser();
-        setUser(userData);
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      }
-    };
-    if (isFocused) loadUserData();
-  }, [isFocused]);
-
-  useEffect(() => {
-    loadHomeData();
-  }, []);
+    if (isAuthenticated && isFocused) {
+      console.log('🏠 HomeScreen: Loading data because user is authenticated'); // Debug
+      loadHomeData();
+    }
+  }, [isAuthenticated, isFocused]); // ← Depend on isAuthenticated
 
   const loadHomeData = async () => {
     try {
       setLoading(true);
+      console.log('🏠 HomeScreen: Starting to load home data...'); // Debug
       
       // Load featured podcasts (popular ones)
       const popularResponse = await podcastService.getPopularPodcasts(1, 6);
@@ -102,17 +98,20 @@ const HomeScreen: React.FC = () => {
         description: podcast.mo_ta
       }));
       setFeaturedPodcasts(featured);
+      console.log('✅ HomeScreen: Featured podcasts loaded:', featured.length); // Debug
 
       // Load recommended podcasts
       const recommendedResponse = await podcastService.getRecommendedPodcasts(1, 5);
       setRecommendedPodcasts(recommendedResponse.data);
+      console.log('✅ HomeScreen: Recommended podcasts loaded:', recommendedResponse.data.length); // Debug
 
       // Load categories từ API
       const categoriesData = await categoriesService.getActiveCategories(50);
       setCategories(categoriesData);
+      console.log('✅ HomeScreen: Categories loaded:', categoriesData.length); // Debug
 
     } catch (error) {
-      console.error('Error loading home data:', error);
+      console.error('❌ HomeScreen: Error loading home data:', error);
       setFeaturedPodcasts([]);
       setRecommendedPodcasts([]);
       setCategories([]);
@@ -123,14 +122,24 @@ const HomeScreen: React.FC = () => {
 
   // Pull to refresh - optimized
   const onRefresh = useCallback(async () => {
+    if (!isAuthenticated) {
+      console.log('🔒 HomeScreen: Cannot refresh, not authenticated');
+      return;
+    }
+    
     setRefreshing(true);
     await loadHomeData();
     setRefreshing(false);
-  }, []);
+  }, [isAuthenticated]); // ← Depend on isAuthenticated
 
   // Search function gọi API thật - optimized
   const performSearch = useCallback(
     debounce(async (text: string) => {
+      if (!isAuthenticated) {
+        console.log('🔒 HomeScreen: Cannot search, not authenticated');
+        return;
+      }
+      
       if (text.trim() === '') {
         setSearchResults([]);
         setSearching(false);
@@ -156,7 +165,7 @@ const HomeScreen: React.FC = () => {
         setSearchLoading(false);
       }
     }, 500),
-    []
+    [isAuthenticated] // ← Depend on isAuthenticated
   );
 
   const onSearchTextChange = useCallback((text: string) => {
@@ -164,6 +173,7 @@ const HomeScreen: React.FC = () => {
     performSearch(text);
   }, [performSearch]);
 
+  // ✅ SỬ DỤNG logout từ AuthContext
   const handleLogout = async () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất không?', [
       { text: 'Hủy', style: 'cancel' },
@@ -171,8 +181,11 @@ const HomeScreen: React.FC = () => {
         text: 'Đăng xuất', 
         style: 'destructive', 
         onPress: async () => {
-          await authService.logout();
-          authService.removeAuthHeader();
+          try {
+            await logout(); // ← Sử dụng logout từ AuthContext
+          } catch (error) {
+            console.error('Logout error:', error);
+          }
         },
       },
     ]);
@@ -219,6 +232,15 @@ const HomeScreen: React.FC = () => {
       setModalVisible(false);
     });
   }, [slideAnim]);
+
+  // ✅ HIỂN thị loading khi chưa authenticated
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={styles.loadingText}>Đang tải...</Text>
+      </View>
+    );
+  }
 
   // Memoized render functions for performance
   const renderHeader = useMemo(() => (
@@ -499,6 +521,12 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#121212' 
+  },
+  // ✅ THÊM STYLE CHO LOADING TEXT
+  loadingText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   headerContainer: { 
     paddingHorizontal: 16, 
