@@ -109,7 +109,7 @@ class PodcastService {
         queryParams.append('danh_muc_id', categoryId);
       }
 
-      const response = await auth.get<any>(`/podcasts/search?${queryParams.toString()}`);
+      const response = await auth.get<any>(`/podcasts/search?${queryParams.toString()}&trang_thai='bật'`);
 
       // Handle response format - search API trả về format khác
       if (response.data.data && Array.isArray(response.data.data)) {

@@ -98,64 +98,9 @@ class CategoriesService {
     }
   }
 
-  // POST /api/categories/ - Tạo danh mục mới
-  async createCategory(data: CreateCategoryData): Promise<CategoryResponse> {
-    try {
-      const response = await auth.post<CategoryResponse>('/categories', data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error creating category:', error);
-      if (error.response?.status === 400) {
-        throw new Error('Dữ liệu không hợp lệ');
-      }
-      if (error.response?.status === 401) {
-        throw new Error('Phiên đăng nhập đã hết hạn');
-      }
-      throw new Error('Không thể tạo danh mục. Vui lòng thử lại.');
-    }
-  }
-
-  // PUT /api/categories/:id - Cập nhật danh mục
-  async updateCategory(id: string, data: UpdateCategoryData): Promise<CategoryResponse> {
-    try {
-      const response = await auth.put<CategoryResponse>(`/categories/${id}`, data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error updating category:', error);
-      if (error.response?.status === 404) {
-        throw new Error('Không tìm thấy danh mục');
-      }
-      if (error.response?.status === 400) {
-        throw new Error('Dữ liệu không hợp lệ');
-      }
-      if (error.response?.status === 401) {
-        throw new Error('Phiên đăng nhập đã hết hạn');
-      }
-      throw new Error('Không thể cập nhật danh mục. Vui lòng thử lại.');
-    }
-  }
-
-  // PUT /api/categories/:id/status - Cập nhật trạng thái danh mục
-  async updateCategoryStatus(id: string, kich_hoat: boolean): Promise<CategoryResponse> {
-    try {
-      const response = await auth.put<CategoryResponse>(`/categories/${id}/status`, {
-        kich_hoat
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Error updating category status:', error);
-      if (error.response?.status === 404) {
-        throw new Error('Không tìm thấy danh mục');
-      }
-      if (error.response?.status === 401) {
-        throw new Error('Phiên đăng nhập đã hết hạn');
-      }
-      throw new Error('Không thể cập nhật trạng thái danh mục. Vui lòng thử lại.');
-    }
-  }
 
   // Lấy danh mục active để hiển thị
-  async getActiveCategories(limit: number = 20): Promise<DanhMuc[]> {
+  async getActiveCategories(limit: number = 10): Promise<DanhMuc[]> {
     try {
       const response = await this.getCategories({
         status: true,
