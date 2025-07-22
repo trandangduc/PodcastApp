@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // iOS cần thời gian để persist AsyncStorage
       if (Platform.OS === 'ios') {
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Tăng delay
       }
       
       // Verify data đã được lưu
