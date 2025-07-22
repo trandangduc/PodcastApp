@@ -228,14 +228,6 @@ class AuthService {
   const isExactMatch = afterHeader === expectedHeader;
   const authHeaderCheck = auth.defaults.headers.common['Authorization'];
   const authHeaderLowerCheck = auth.defaults.headers.common['authorization'];
-  // 9. Final status
-  if (isExactMatch) {
-    console.log('setAuthHeader SUCCESS - Token properly set in headers');
-  } else {
-    console.log('setAuthHeader FAILED - Token NOT properly set');
-  }
-  
-  console.log('===== setAuthHeader DEBUG END =====\n');
 }
 
   removeAuthHeader(): void {

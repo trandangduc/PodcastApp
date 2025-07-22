@@ -1,4 +1,3 @@
-// HomeScreen.tsx - FIXED
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
@@ -57,8 +56,7 @@ const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
-  
-  // ✅ SỬ DỤNG AuthContext thay vì authService trực tiếp
+
   const { user, isAuthenticated, logout } = useAuth();
 
   // States
@@ -75,21 +73,14 @@ const HomeScreen: React.FC = () => {
   
   // Animation for modal
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-
-  // ✅ CHỈ LOAD DATA KHI ĐÃ AUTHENTICATED
   useEffect(() => {
     if (isAuthenticated && isFocused) {
-      console.log('🏠 HomeScreen: Loading data because user is authenticated'); // Debug
       loadHomeData();
     }
-  }, [isAuthenticated, isFocused]); // ← Depend on isAuthenticated
-
+  }, [isAuthenticated, isFocused]); 
   const loadHomeData = async () => {
     try {
       setLoading(true);
-      console.log('🏠 HomeScreen: Starting to load home data...'); // Debug
-      
-      // Load featured podcasts (popular ones)
       const popularResponse = await podcastService.getPopularPodcasts(1, 6);
       const featured = popularResponse.data.map((podcast): FeaturedPodcast => ({
         id: podcast.id,
@@ -98,20 +89,15 @@ const HomeScreen: React.FC = () => {
         description: podcast.mo_ta
       }));
       setFeaturedPodcasts(featured);
-      console.log('✅ HomeScreen: Featured podcasts loaded:', featured.length); // Debug
-
       // Load recommended podcasts
       const recommendedResponse = await podcastService.getRecommendedPodcasts(1, 5);
       setRecommendedPodcasts(recommendedResponse.data);
-      console.log('✅ HomeScreen: Recommended podcasts loaded:', recommendedResponse.data.length); // Debug
-
-      // Load categories từ API
+  
       const categoriesData = await categoriesService.getActiveCategories(50);
       setCategories(categoriesData);
-      console.log('✅ HomeScreen: Categories loaded:', categoriesData.length); // Debug
-
+   
     } catch (error) {
-      console.error('❌ HomeScreen: Error loading home data:', error);
+      console.error('HomeScreen: Error loading home data:', error);
       setFeaturedPodcasts([]);
       setRecommendedPodcasts([]);
       setCategories([]);
@@ -123,7 +109,6 @@ const HomeScreen: React.FC = () => {
   // Pull to refresh - optimized
   const onRefresh = useCallback(async () => {
     if (!isAuthenticated) {
-      console.log('🔒 HomeScreen: Cannot refresh, not authenticated');
       return;
     }
     
@@ -136,7 +121,6 @@ const HomeScreen: React.FC = () => {
   const performSearch = useCallback(
     debounce(async (text: string) => {
       if (!isAuthenticated) {
-        console.log('🔒 HomeScreen: Cannot search, not authenticated');
         return;
       }
       
@@ -173,7 +157,6 @@ const HomeScreen: React.FC = () => {
     performSearch(text);
   }, [performSearch]);
 
-  // ✅ SỬ DỤNG logout từ AuthContext
   const handleLogout = async () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất không?', [
       { text: 'Hủy', style: 'cancel' },
@@ -182,7 +165,7 @@ const HomeScreen: React.FC = () => {
         style: 'destructive', 
         onPress: async () => {
           try {
-            await logout(); // ← Sử dụng logout từ AuthContext
+            await logout(); 
           } catch (error) {
             console.error('Logout error:', error);
           }
@@ -233,7 +216,6 @@ const HomeScreen: React.FC = () => {
     });
   }, [slideAnim]);
 
-  // ✅ HIỂN thị loading khi chưa authenticated
   if (!isAuthenticated) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>

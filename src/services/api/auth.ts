@@ -25,7 +25,6 @@ auth.interceptors.request.use(
       } else {
         // Android: Dùng Authorization bình thường
         config.headers.Authorization = defaultAuthHeader;
-        console.log('Android: Set Authorization header');
       }
     }
     
@@ -40,7 +39,6 @@ auth.interceptors.request.use(
 // Response interceptor
 auth.interceptors.response.use(
   (response) => {
-    console.log('Response Success:', response.status, response.config.url);
     return response;
   },
   async (error) => {
