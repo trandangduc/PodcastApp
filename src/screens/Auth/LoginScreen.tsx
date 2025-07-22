@@ -1,3 +1,4 @@
+// LoginScreen.tsx - FIXED
 import React, { useState } from 'react';
 import {
   View,
@@ -15,7 +16,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { Ionicons, MaterialIcons, AntDesign } from '@expo/vector-icons';
-import authService from '../../services/api/authService';
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 
 type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -28,12 +29,14 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  // SỬ DỤNG AuthContext
+  const { login } = useAuth();
+
   const validateForm = (): boolean => {
     setEmailError('');
     setPasswordError('');
-
+    
     let isValid = true;
-
     if (!email.trim()) {
       setEmailError('Vui lòng nhập email');
       isValid = false;
@@ -41,7 +44,6 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
       setEmailError('Email không hợp lệ');
       isValid = false;
     }
-
     if (!password.trim()) {
       setPasswordError('Vui lòng nhập mật khẩu');
       isValid = false;
@@ -49,7 +51,6 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
       setPasswordError('Mật khẩu phải có ít nhất 6 ký tự');
       isValid = false;
     }
-
     return isValid;
   };
 
@@ -57,28 +58,19 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
     if (!validateForm()) {
       return;
     }
-
     setIsLoading(true);
-
+    
     try {
-      // Call login API
-      const loginData = await authService.login({
-        email: email.trim(),
-        mat_khau: password,
-      });
-
-      // Save auth data to AsyncStorage
-      await authService.saveAuthData(loginData.token, loginData.user, rememberMe);
-      // Đợi một chút để đảm bảo AsyncStorage đã lưu xong (đặc biệt cho iOS)
-      if (Platform.OS === 'ios') {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-      // Set authorization header for subsequent requests
-      authService.setAuthHeader(loginData.token);
-
-      // Success - AppNavigator will automatically detect the token and switch to TabNavigator
+      console.log('Starting login via AuthContext...'); // Debug log
+      
+      // SỬ DỤNG login function từ AuthContext
+      await login(email.trim(), password, rememberMe);
+      
+      console.log('Login successful via AuthContext'); // Debug log
       Alert.alert('Thành công', 'Đăng nhập thành công!');
-
+      
+      // AuthContext sẽ tự động update state và navigate
+      
     } catch (error: any) {
       console.error('Login error:', error);
       Alert.alert('Lỗi', error.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
@@ -116,7 +108,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.formContainer}>
             <Text style={styles.title}>Đăng nhập</Text>
-
+            
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputWrapper}>
@@ -162,10 +154,10 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                   onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                   disabled={isLoading}
                 >
-                  <Ionicons
-                    name={isPasswordVisible ? "eye-off" : "eye"}
-                    size={20}
-                    color="#4CAF50"
+                  <Ionicons 
+                    name={isPasswordVisible ? "eye-off" : "eye"} 
+                    size={20} 
+                    color="#4CAF50" 
                   />
                 </TouchableOpacity>
               </View>
@@ -215,7 +207,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
               <View style={styles.line} />
             </View>
 
-            <TouchableOpacity
+            <TouchableOpacity 
               style={styles.socialButton}
               onPress={() => handleSocialLogin('Google')}
               disabled={isLoading}

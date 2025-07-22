@@ -1,10 +1,11 @@
-// AppNavigator.tsx - Updated
-import React, { useEffect, useState } from 'react';
+// AppNavigator.tsx - FIXED
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ActivityIndicator, View } from 'react-native';
 import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
 import { RootStackParamList } from './types';
-import authService from '../services/api/authService';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
 // IMPORT màn hình chi tiết hồ sơ
 import DetailsProfileScreen from '../screens/Profile/DetailsProfileScreen';
@@ -23,31 +24,17 @@ import HistoryScreen from '../screens/Podcast/HistoryScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // SỬ DỤNG AuthContext thay vì state riêng
+  const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const authenticated = await authService.isAuthenticated();
-        if (authenticated) {
-          const token = await authService.getToken();
-          if (token) {
-            authService.setAuthHeader(token);
-          }
-        }
-        setIsAuthenticated(authenticated);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        setIsAuthenticated(false);
-      }
-    };
-
-    checkAuth();
-    const interval = setInterval(checkAuth, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (isAuthenticated === null) return null; // loading...
+  // Hiển thị loading khi đang check auth
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+      </View>
+    );
+  }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -68,9 +55,6 @@ const AppNavigator = () => {
           <Stack.Screen name="Favorites" component={FavoritesScreen} />
           <Stack.Screen name="AudioPlayerScreen" component={AudioPlayerScreen} />
           <Stack.Screen name="HistoryScreen" component={HistoryScreen} />
-
-          
-          {/* Other Screens */}
         </>
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
