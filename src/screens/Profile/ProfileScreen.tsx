@@ -15,12 +15,14 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import authService from '../../services/api/authService';
+// Import useAuth context để có thể cập nhật trạng thái auth
+import { useAuth } from '../../contexts/AuthContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ProfileScreen: React.FC = () => {
-  // Thêm type cho navigation
   const navigation = useNavigation<NavigationProp>();
+  const { logout: contextLogout } = useAuth(); // Sử dụng logout từ AuthContext
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const isFocused = useIsFocused();
@@ -36,8 +38,9 @@ const ProfileScreen: React.FC = () => {
         setIsLoading(false);
       }
     };
+
     if (isFocused) {
-      if (!user) setIsLoading(true); // chỉ loading khi chưa có user
+      if (!user) setIsLoading(true);
       loadUserData();
     }
   }, [isFocused]);
@@ -56,17 +59,19 @@ const ProfileScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Gọi logout từ authService
               await authService.logout();
               authService.removeAuthHeader();
               
-              // Reset navigation stack and go to Auth
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'Auth' }],
-                })
-              );
+              // Gọi logout từ AuthContext để cập nhật state global
+              // AuthContext sẽ tự động điều hướng về Auth screen
+              await contextLogout();
+              
+              // Không cần dùng navigation.dispatch ở đây nữa
+              // vì AuthContext đã handle việc này trong AppNavigator
+              
             } catch (error) {
+              console.error('Logout error:', error);
               Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
             }
           },

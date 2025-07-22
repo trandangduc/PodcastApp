@@ -222,8 +222,57 @@ class AuthService {
   }
 
   setAuthHeader(token: string): void {
-    auth.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  console.log('\n🔐 ===== setAuthHeader DEBUG START =====');
+  
+  // 1. Log input token
+  console.log('🔐 INPUT token:', token ? `${token.substring(0, 50)}...` : 'NULL/UNDEFINED');
+  console.log('🔐 Token length:', token ? token.length : 0);
+  console.log('🔐 Token type:', typeof token);
+  
+  // 2. Check current header before setting
+  const beforeHeader = auth.defaults.headers.common['Authorization'];
+  console.log('🔐 Header BEFORE set:', beforeHeader || 'NOT_SET');
+  
+  // 3. Set the header
+  console.log('🔐 Setting header...');
+  auth.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  console.log('🔐 Header set command executed');
+  
+  // 4. Verify header was actually set
+  const afterHeader = auth.defaults.headers.common['Authorization'];
+  console.log('🔐 Header AFTER set:', afterHeader || 'FAILED_TO_SET');
+  
+  // 5. Detailed verification
+  const expectedHeader = `Bearer ${token}`;
+  const isExactMatch = afterHeader === expectedHeader;
+  console.log('🔐 Expected header:', `${expectedHeader.substring(0, 50)}...`);
+  console.log('🔐 Actual header:  ', afterHeader ? `${afterHeader.substring(0, 50)}...` : 'NULL');
+  console.log('🔐 Headers match:', isExactMatch ? '✅ YES' : '❌ NO');
+  
+  // 6. Check if auth object exists and is valid
+  console.log('🔐 auth object exists:', !!auth);
+  console.log('🔐 auth.defaults exists:', !!auth.defaults);
+  console.log('🔐 auth.defaults.headers exists:', !!auth.defaults.headers);
+  console.log('🔐 auth.defaults.headers.common exists:', !!auth.defaults.headers.common);
+  
+  // 7. Log all common headers
+  console.log('🔐 All common headers:', JSON.stringify(auth.defaults.headers.common, null, 2));
+  
+  // 8. Double check authorization header specifically
+  const authHeaderCheck = auth.defaults.headers.common['Authorization'];
+  const authHeaderLowerCheck = auth.defaults.headers.common['authorization'];
+  console.log('🔐 Authorization (capital A):', authHeaderCheck ? 'EXISTS' : 'NOT_EXISTS');
+  console.log('🔐 authorization (lowercase a):', authHeaderLowerCheck ? 'EXISTS' : 'NOT_EXISTS');
+  
+  // 9. Final status
+  if (isExactMatch) {
+    console.log('✅ setAuthHeader SUCCESS - Token properly set in headers');
+  } else {
+    console.log('❌ setAuthHeader FAILED - Token NOT properly set');
   }
+  
+  console.log('🔐 ===== setAuthHeader DEBUG END =====\n');
+}
 
   removeAuthHeader(): void {
     delete auth.defaults.headers.common['Authorization'];

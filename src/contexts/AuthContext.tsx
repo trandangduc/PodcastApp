@@ -18,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string, rememberMe: boolean) => Promise<void>;
   logout: () => Promise<void>;
   checkAuthStatus: () => Promise<void>;
+  refreshUser: () => Promise<void>; // Thêm method refresh user
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,7 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       console.log('🔍 Checking auth status...'); // Debug log
-
+      
       // Setup auto login trước
       await authService.setupAutoLogin();
       
@@ -67,19 +68,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } else {
         console.log('❌ Not authenticated'); // Debug log
-        setToken(null);
-        setUser(null);
-        setIsAuthenticated(false);
-        authService.removeAuthHeader();
+        await resetAuthState();
       }
     } catch (error) {
       console.error('❌ Auth status check failed:', error);
-      setToken(null);
-      setUser(null);
-      setIsAuthenticated(false);
-      authService.removeAuthHeader();
+      await resetAuthState();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function để reset auth state
+  const resetAuthState = async () => {
+    setToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+    authService.removeAuthHeader();
+    
+    // Clear any remaining auth data
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Error clearing auth data:', error);
     }
   };
 
@@ -128,9 +138,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔒 Logging out...'); // Debug log
       
+      // Set loading state để tránh flicker
+      setIsLoading(true);
+      
+      // Clear auth data từ service
       await authService.logout();
       authService.removeAuthHeader();
       
+      // Reset local state
       setToken(null);
       setUser(null);
       setIsAuthenticated(false);
@@ -139,7 +154,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
     } catch (error) {
       console.error('❌ Logout failed:', error);
+      
+      // Ngay cả khi có lỗi, vẫn reset state để đảm bảo user được logout
+      setToken(null);
+      setUser(null);
+      setIsAuthenticated(false);
+      authService.removeAuthHeader();
+      
       throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Thêm method để refresh user data
+  const refreshUser = async () => {
+    try {
+      const updatedUser = await authService.getUser(true); // force refresh
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing user:', error);
+      // Nếu không thể refresh, có thể token đã hết hạn
+      await logout();
     }
   };
 
@@ -151,6 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     checkAuthStatus,
+    refreshUser,
   };
 
   return (
