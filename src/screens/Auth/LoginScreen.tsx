@@ -31,7 +31,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
   const validateForm = (): boolean => {
     setEmailError('');
     setPasswordError('');
-    
+
     let isValid = true;
 
     if (!email.trim()) {
@@ -59,7 +59,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
     }
 
     setIsLoading(true);
-    
+
     try {
       // Call login API
       const loginData = await authService.login({
@@ -69,7 +69,10 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
 
       // Save auth data to AsyncStorage
       await authService.saveAuthData(loginData.token, loginData.user, rememberMe);
-
+      // Đợi một chút để đảm bảo AsyncStorage đã lưu xong (đặc biệt cho iOS)
+      if (Platform.OS === 'ios') {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
       // Set authorization header for subsequent requests
       authService.setAuthHeader(loginData.token);
 
@@ -113,7 +116,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.formContainer}>
             <Text style={styles.title}>Đăng nhập</Text>
-            
+
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputWrapper}>
@@ -159,10 +162,10 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
                   onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                   disabled={isLoading}
                 >
-                  <Ionicons 
-                    name={isPasswordVisible ? "eye-off" : "eye"} 
-                    size={20} 
-                    color="#4CAF50" 
+                  <Ionicons
+                    name={isPasswordVisible ? "eye-off" : "eye"}
+                    size={20}
+                    color="#4CAF50"
                   />
                 </TouchableOpacity>
               </View>
@@ -212,7 +215,7 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
               <View style={styles.line} />
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.socialButton}
               onPress={() => handleSocialLogin('Google')}
               disabled={isLoading}

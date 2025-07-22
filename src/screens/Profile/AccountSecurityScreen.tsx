@@ -9,6 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ Add import
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,30 +17,25 @@ import { RootStackParamList } from '../../navigation';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-// Định nghĩa base interface
 interface BaseSettingsItem {
   title: string;
   icon: string;
   danger?: boolean;
 }
 
-// Interface cho item có onPress
 interface PressableItem extends BaseSettingsItem {
   isSwitch?: false;
   onPress: () => void | Promise<void>;
 }
 
-// Interface cho item có switch
 interface SwitchItem extends BaseSettingsItem {
   isSwitch: true;
   switchValue: boolean;
   onToggle: (value: boolean) => void;
 }
 
-// Union type
 type SettingsItem = PressableItem | SwitchItem;
 
-// Interface cho section
 interface SettingsSection {
   title: string;
   data: SettingsItem[];
@@ -47,6 +43,7 @@ interface SettingsSection {
 
 const SettingsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets(); // ✅ Add hook
   const { logout } = useAuth();
 
   const sections: SettingsSection[] = [
@@ -108,8 +105,14 @@ const SettingsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <Text style={styles.header}>Thiết lập tài khoản</Text>
+      <ScrollView 
+        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }} // ✅ Responsive bottom
+      >
+        {/* ✅ Responsive header */}
+        <Text style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          Thiết lập tài khoản
+        </Text>
+        
         {sections.map((section, index) => (
           <View key={index}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -170,10 +173,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16, // ✅ Remove paddingVertical: 16
     color: '#fff',
     borderBottomColor: '#333',
     borderBottomWidth: 1,
+    backgroundColor: '#1a1a1a', // ✅ Add background
   },
   sectionTitle: {
     paddingHorizontal: 20,

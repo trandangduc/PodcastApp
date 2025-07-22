@@ -395,7 +395,7 @@ const PodcastListScreen: React.FC<PodcastListProps> = ({ route }) => {
       <Text style={styles.headerTitle}>
         {categoryName ? `${categoryName}` : 'Tất cả Podcast'}
       </Text>
-      <View style={styles.backButton} />
+
     </View>
   ), [insets.top, navigation, categoryName]);
 

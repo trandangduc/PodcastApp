@@ -7,13 +7,16 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ Add import
 import { useNavigation } from '@react-navigation/native';
 import { changePassword } from '../../services/api/profileService';
 
 const ChangePasswordScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets(); // ✅ Add hook
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -55,11 +58,17 @@ const ChangePasswordScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      {/* ✅ Responsive header */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.headerText}>Đổi mật khẩu</Text>
       </View>
 
-      <View style={styles.form}>
+      <ScrollView 
+        contentContainerStyle={[
+          styles.form,
+          { paddingBottom: insets.bottom + 40 } // ✅ Responsive bottom
+        ]}
+      >
         <PasswordInput
           label="Mật khẩu hiện tại"
           value={oldPassword}
@@ -84,7 +93,7 @@ const ChangePasswordScreen = () => {
           <Feather name="lock" size={20} color="#fff" />
           <Text style={styles.buttonText}>Lưu mật khẩu mới</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -125,16 +134,35 @@ const PasswordInput = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a1a' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#1a1a1a' 
+  },
   header: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 16, // ✅ Remove paddingVertical
     borderBottomWidth: 1,
     borderBottomColor: '#333',
+    backgroundColor: '#1a1a1a', // ✅ Add background
   },
-  headerText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  form: { padding: 20 },
-  inputContainer: { marginBottom: 16 },
-  label: { color: '#ccc', fontSize: 14, marginBottom: 6 },
+  headerText: { 
+    color: '#fff', 
+    fontSize: 20, 
+    fontWeight: 'bold' 
+  },
+  form: { 
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    flexGrow: 1, // ✅ Changed from padding: 20
+  },
+  inputContainer: { 
+    marginBottom: 16 
+  },
+  label: { 
+    color: '#ccc', 
+    fontSize: 14, 
+    marginBottom: 6 
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',

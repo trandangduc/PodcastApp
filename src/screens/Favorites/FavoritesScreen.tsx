@@ -152,14 +152,9 @@ const FavoritesScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  // ✅ Đã bỏ icon back
   const renderHeader = () => (
     <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Ionicons name="arrow-back" size={24} color="#fff" />
-      </TouchableOpacity>
       <Text style={styles.headerTitle}>Yêu thích ({favorites.length})</Text>
       <TouchableOpacity 
         style={styles.clearButton}
@@ -224,24 +219,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between', // ✅ Giữ space-between để title căn giữa và nút clear ở bên phải
     paddingHorizontal: 16,
     paddingBottom: 16,
     backgroundColor: '#1a1a1a',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#2a2a2a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // ✅ Đã xóa backButton style vì không cần nữa
   headerTitle: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-    flex: 1,
+    flex: 1, // ✅ Giữ flex: 1 để title vẫn căn giữa
     textAlign: 'center',
   },
   clearButton: {

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth from './auth';
-import { getProfile } from './profileService'; // 👈 Gọi từ API mới nhất
+import { getProfile } from './profileService'; 
 
 export interface LoginRequest {
   email: string;
@@ -16,7 +16,14 @@ export interface LoginResponse {
     vai_tro: string;
   };
 }
-
+export interface UserProfile {
+  id: string;
+  email: string;
+  ho_ten: string;
+  vai_tro: string;
+  ngay_tao: string;
+  kich_hoat: boolean;
+}
 export interface AuthError {
   error: string;
 }
@@ -63,14 +70,73 @@ class AuthService {
     }
   }
 
-  // ❗ FIX: Lấy user từ server mới nhất
-  async getUser(): Promise<any | null> {
+  async getUser(forceRefresh: boolean = false): Promise<UserProfile | null> {
     try {
-      const profile = await getProfile(); // gọi API mới nhất
-      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profile)); // cập nhật lại
-      return profile;
+      // 🔥 Nếu không force refresh, đọc từ AsyncStorage trước
+      if (!forceRefresh) {
+        const cachedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER);
+        if (cachedUser) {
+          try {
+            return JSON.parse(cachedUser) as UserProfile;
+          } catch (parseError) {
+            console.error('Error parsing cached user:', parseError);
+            // Cache bị lỗi, xóa và tiếp tục gọi API
+            await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+          }
+        }
+      }
+
+      // Kiểm tra token trước khi gọi API
+      const token = await this.getToken();
+      if (!token || this.isTokenExpired(token)) {
+        console.log('No valid token, cannot fetch user profile');
+        return null;
+      }
+
+      // Gọi API để lấy profile mới nhất
+      try {
+        const profile = await getProfile();
+
+        // Lưu vào AsyncStorage để dùng cho lần sau
+        await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profile));
+
+        return profile;
+      } catch (apiError: any) {
+        console.error('Error fetching user profile from API:', apiError);
+
+        // Xử lý các lỗi từ API
+        if (apiError.message?.includes('Token không hợp lệ') ||
+          apiError.message?.includes('hết hạn')) {
+          // Token hết hạn, logout user
+          await this.logout();
+          return null;
+        }
+
+        if (apiError.message?.includes('Không tìm thấy người dùng')) {
+          // User không tồn tại, logout
+          await this.logout();
+          return null;
+        }
+
+        // Fallback: Với các lỗi khác (network, server), dùng cache cũ
+        if (!forceRefresh) {
+          const cachedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER);
+          if (cachedUser) {
+            console.log('Using cached user data as fallback due to API error');
+            try {
+              return JSON.parse(cachedUser) as UserProfile;
+            } catch (parseError) {
+              console.error('Error parsing fallback cached user:', parseError);
+              await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+            }
+          }
+        }
+
+        // Không có cache hoặc cache lỗi
+        return null;
+      }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error in getUser:', error);
       return null;
     }
   }
@@ -106,7 +172,7 @@ class AuthService {
       return false;
     }
   }
-    // Register API call
+  // Register API call
   async register({
     ho_ten,
     email,
