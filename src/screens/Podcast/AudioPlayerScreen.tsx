@@ -1,4 +1,4 @@
-// 👇 Những phần đầu giữ nguyên như bạn đã viết
+
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -44,32 +44,42 @@ const AudioPlayerScreen: React.FC = () => {
 
   useEffect(() => {
     loadPodcast();
-    return () => {
-      if (sound.current) sound.current.unloadAsync();
-      rotateAnim.stopAnimation();
-    };
+    // return () => {
+    //   if (sound.current) sound.current.unloadAsync();
+    //   rotateAnim.stopAnimation();
+    // };
   }, []);
 
-  const loadPodcast = async () => {
-    try {
-      const res = await podcastService.getPodcastById(podcastId);
-      const episode = res.data;
-      setPodcast(episode);
-      await playAudio(episode.duong_dan_audio);
+const loadPodcast = async () => {
+  try {
+    const res = await podcastService.getPodcastById(podcastId);
+    const episode = res.data;
+    setPodcast(episode);
 
-      // ✅ Lưu vào lịch sử
-      await saveToHistory({
-        id: episode.id,
-        title: episode.tieu_de,
-        image: episode.hinh_anh_dai_dien,
-        audioUri: episode.duong_dan_audio,
-      });
-    } catch (err) {
-      console.error('Error loading podcast:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Cho phép phát nền
+    await Audio.setAudioModeAsync({
+      staysActiveInBackground: true,
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    });
+
+    await playAudio(episode.duong_dan_audio);
+
+    await saveToHistory({
+      id: episode.id,
+      title: episode.tieu_de,
+      image: episode.hinh_anh_dai_dien,
+      audioUri: episode.duong_dan_audio,
+    });
+  } catch (err) {
+    console.error('Error loading podcast:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const playAudio = async (url: string) => {
     try {
