@@ -10,14 +10,35 @@ import {
 import { getHistory, clearHistory } from '../../services/api/historyService';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import type { NavigationProp } from '@react-navigation/native';
 
-const HistoryScreen = () => {
-  const [history, setHistory] = useState([]);
-  const navigation = useNavigation();
+// Define types
+interface HistoryItem {
+  id: number | string;
+  image: string;
+  title: string;
+  listenedAt: string | Date;
+}
 
-  const loadHistory = async () => {
-    const data = await getHistory();
-    setHistory(data);
+type RootStackParamList = {
+  AudioPlayerScreen: { podcastId: number | string };
+  // Add other screens as needed
+};
+
+type NavigationType = NavigationProp<RootStackParamList>;
+
+const HistoryScreen: React.FC = () => {
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const navigation = useNavigation<NavigationType>();
+
+  const loadHistory = async (): Promise<void> => {
+    try {
+      const data: HistoryItem[] = await getHistory();
+      setHistory(data || []); // Fallback to empty array if data is null/undefined
+    } catch (error) {
+      console.error('Error loading history:', error);
+      setHistory([]);
+    }
   };
 
   useEffect(() => {
@@ -25,10 +46,39 @@ const HistoryScreen = () => {
     return unsubscribe;
   }, [navigation]);
 
-  const handleClear = async () => {
-    await clearHistory();
-    setHistory([]);
+  const handleClear = async (): Promise<void> => {
+    try {
+      await clearHistory();
+      setHistory([]);
+    } catch (error) {
+      console.error('Error clearing history:', error);
+    }
   };
+
+  const renderItem = ({ item }: { item: HistoryItem }) => (
+    <TouchableOpacity
+      style={styles.item}
+      onPress={() =>
+        navigation.navigate('AudioPlayerScreen', { podcastId: item.id })
+      }
+    >
+      <Image source={{ uri: item.image }} style={styles.image} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.itemTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        <Text style={styles.timestamp}>
+          🕒 {new Date(item.listenedAt).toLocaleString()}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const keyExtractor = (item: HistoryItem): string => item.id.toString();
+
+  const ListEmptyComponent = () => (
+    <Text style={styles.emptyText}>Chưa có lịch sử nghe.</Text>
+  );
 
   return (
     <View style={styles.container}>
@@ -38,31 +88,12 @@ const HistoryScreen = () => {
           <Ionicons name="trash-outline" size={24} color="#ff4d4f" />
         </TouchableOpacity>
       </View>
-
-      <FlatList
+      <FlatList<HistoryItem>
         data={history}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() =>
-              navigation.navigate('AudioPlayerScreen', { podcastId: item.id })
-            }
-          >
-            <Image source={{ uri: item.image }} style={styles.image} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <Text style={styles.timestamp}>
-                🕒 {new Date(item.listenedAt).toLocaleString()}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>Chưa có lịch sử nghe.</Text>
-        }
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ListEmptyComponent={ListEmptyComponent}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -71,7 +102,7 @@ const HistoryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', 
+    backgroundColor: '#121212',
     padding: 16,
   },
   header: {

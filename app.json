@@ -13,20 +13,64 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.trandangduc0.podcastapp2025",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio",
+          "background-fetch",
+          "background-processing"
+        ],
+        "NSUserNotificationsUsageDescription": "Ứng dụng cần quyền thông báo để gửi thông tin về podcast mới và cập nhật phát nhạc."
+      }
     },
     "android": {
+      "package": "com.trandangduc0.podcastapp2025",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "useNextNotificationsApi": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-audio"
-    ]
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff",
+          "sounds": [],
+          "mode": "production"
+        }
+      ]
+    ],
+    "notification": {
+      "icon": "./assets/noti.png",
+      "color": "#00d4ff",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Podcast Player"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "acbbd0bc-f141-4e50-9264-444dd4f8458c"
+      }
+    }
   }
 }

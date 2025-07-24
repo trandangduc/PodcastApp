@@ -1,3 +1,4 @@
+// DetailsProfileScreen - Responsive
 import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
@@ -9,16 +10,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ Add import
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { getProfile } from '../../services/api/profileService';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 const DetailsProfileScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets(); // ✅ Add hook
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const isFocused = useIsFocused(); // ✅ Hook để detect khi màn hình được focus
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -36,7 +41,7 @@ const DetailsProfileScreen = () => {
     if (isFocused) {
       fetchUser();
     }
-  }, [isFocused]); // ✅ chạy lại khi màn hình được focus
+  }, [isFocused]);
 
   if (loading) {
     return (
@@ -51,14 +56,20 @@ const DetailsProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      {/* ✅ Responsive header */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.headerText}>Thông Tin Cá Nhân</Text>
         <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')}>
           <Feather name="edit" size={22} color="#fff" style={styles.editIcon} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 40 } // ✅ Responsive bottom
+        ]}
+      >
         <View style={styles.avatarContainer}>
           <MaterialIcons name="account-circle" size={100} color="#4CAF50" />
         </View>
@@ -111,7 +122,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
   },
   content: {
-    paddingBottom: 40,
+    flexGrow: 1, // ✅ Changed from paddingBottom: 40
   },
   loadingContainer: {
     flex: 1,
@@ -128,9 +139,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16, // ✅ Remove paddingVertical: 16
     borderBottomColor: '#333',
     borderBottomWidth: 1,
+    backgroundColor: '#1a1a1a', // ✅ Add background
   },
   headerText: {
     color: '#fff',
@@ -149,6 +161,7 @@ const styles = StyleSheet.create({
   infoSection: {
     backgroundColor: '#2d2d2d',
     paddingHorizontal: 20,
+    paddingBottom: 20, // ✅ Add padding bottom
   },
   itemContainer: {
     flexDirection: 'row',

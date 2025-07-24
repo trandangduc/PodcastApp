@@ -5,7 +5,7 @@ import * as SplashScreenExpo from 'expo-splash-screen';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/contexts/AuthContext';
 import SplashScreen from './src/screens/Splash/SplashScreen';
-
+import './polyfills';
 SplashScreenExpo.preventAutoHideAsync();
 
 export default function App() {

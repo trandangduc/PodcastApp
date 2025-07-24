@@ -46,7 +46,6 @@ export interface Podcast {
   ngay_xuat_ban: string | null;
   the_tag: string;
   luot_xem: number;
-  tailieu: TaiLieu;
   danhmuc: DanhMuc;
 }
 

@@ -10,11 +10,13 @@ import {
   Platform,
   ScrollView,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import authService from '../../services/api/authService'; // ✅ đã tách xử lý
+import { LinearGradient } from 'expo-linear-gradient';
+import authService from '../../services/api/authService';
 
 type RegisterScreenProps = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -25,42 +27,64 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [fullNameError, setFullNameError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
-  const handleRegister = async () => {
+  const validateForm = (): boolean => {
+    setFullNameError('');
     setEmailError('');
+    setPasswordError('');
     setConfirmPasswordError('');
 
-    if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
-      return;
+    let isValid = true;
+
+    if (!fullName.trim()) {
+      setFullNameError('Vui lòng nhập họ tên');
+      isValid = false;
     }
 
-    if (!email.includes('@')) {
+    if (!email.trim()) {
+      setEmailError('Vui lòng nhập email');
+      isValid = false;
+    } else if (!email.includes('@')) {
       setEmailError('Email không hợp lệ');
-      return;
+      isValid = false;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Lỗi', 'Mật khẩu phải có ít nhất 6 ký tự');
-      return;
+    if (!password.trim()) {
+      setPasswordError('Vui lòng nhập mật khẩu');
+      isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự');
+      isValid = false;
     }
 
-    if (password !== confirmPassword) {
+    if (!confirmPassword.trim()) {
+      setConfirmPasswordError('Vui lòng xác nhận mật khẩu');
+      isValid = false;
+    } else if (password !== confirmPassword) {
       setConfirmPasswordError('Mật khẩu xác nhận không khớp');
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  const handleRegister = async () => {
+    if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
+
     try {
       await authService.register({
-        ho_ten: fullName,
-        email,
+        ho_ten: fullName.trim(),
+        email: email.trim(),
         mat_khau: password,
       });
-
       Alert.alert('Thành công', 'Tạo tài khoản thành công!');
       navigation.replace('Login');
     } catch (error: any) {
@@ -75,191 +99,273 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
     }
   };
 
+  const handleLogin = () => {
+    navigation.replace('Login');
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.formContainer}>
-            <Text style={styles.title}>Tạo tài khoản</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Simple Background Gradient */}
+      <LinearGradient
+        colors={['#0F0F23', '#1A1A2E']}
+        style={StyleSheet.absoluteFillObject}
+      />
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Họ tên</Text>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons name="person" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nhập họ và tên"
-                  placeholderTextColor="#666"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  editable={!isLoading}
-                />
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoidingView}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.headerContainer}>
+              <View style={styles.logoContainer}>
+                <Ionicons name="person-add" size={40} color="#4CAF50" />
               </View>
+              <Text style={styles.welcomeText}>Tạo tài khoản</Text>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons name="email" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nhập email của bạn"
-                  placeholderTextColor="#666"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
-              </View>
-              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mật khẩu</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nhập mật khẩu"
-                  placeholderTextColor="#666"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!isPasswordVisible}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                  disabled={isLoading}
-                >
-                  <Ionicons
-                    name={isPasswordVisible ? 'eye-off' : 'eye'}
-                    size={20}
-                    color="#4CAF50"
+            {/* Form */}
+            <View style={styles.formContainer}>
+              {/* Full Name Input */}
+              <View style={styles.inputContainer}>
+                <View style={[styles.inputWrapper, fullNameError && styles.inputWrapperError]}>
+                  <MaterialIcons name="person" size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Họ và tên"
+                    placeholderTextColor="#666"
+                    value={fullName}
+                    onChangeText={(text) => {
+                      setFullName(text);
+                      if (fullNameError) setFullNameError('');
+                    }}
+                    editable={!isLoading}
                   />
+                </View>
+                {fullNameError ? <Text style={styles.errorText}>{fullNameError}</Text> : null}
+              </View>
+
+              {/* Email Input */}
+              <View style={styles.inputContainer}>
+                <View style={[styles.inputWrapper, emailError && styles.inputWrapperError]}>
+                  <MaterialIcons name="email" size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor="#666"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (emailError) setEmailError('');
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                </View>
+                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputContainer}>
+                <View style={[styles.inputWrapper, passwordError && styles.inputWrapperError]}>
+                  <Ionicons name="lock-closed" size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Mật khẩu"
+                    placeholderTextColor="#666"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (passwordError) setPasswordError('');
+                    }}
+                    secureTextEntry={!isPasswordVisible}
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                    disabled={isLoading}
+                  >
+                    <Ionicons
+                      name={isPasswordVisible ? 'eye-off' : 'eye'}
+                      size={20}
+                      color="#4CAF50"
+                    />
+                  </TouchableOpacity>
+                </View>
+                {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+              </View>
+
+              {/* Confirm Password Input */}
+              <View style={styles.inputContainer}>
+                <View style={[styles.inputWrapper, confirmPasswordError && styles.inputWrapperError]}>
+                  <Ionicons name="checkmark-circle" size={20} color="#666" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Xác nhận mật khẩu"
+                    placeholderTextColor="#666"
+                    value={confirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      if (confirmPasswordError) setConfirmPasswordError('');
+                    }}
+                    secureTextEntry={!isPasswordVisible}
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+                </View>
+                {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
+              </View>
+
+              {/* Register Button */}
+              <TouchableOpacity
+                style={[styles.registerButton, isLoading && styles.disabledButton]}
+                onPress={handleRegister}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={isLoading ? ['#666', '#555'] : ['#4CAF50', '#45A049']}
+                  style={styles.registerButtonGradient}
+                >
+                  <Text style={styles.registerButtonText}>
+                    {isLoading ? 'Đang tạo tài khoản...' : 'Đăng ký'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Login Link */}
+              <View style={styles.loginContainer}>
+                <Text style={styles.loginText}>Đã có tài khoản? </Text>
+                <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
+                  <Text style={styles.loginLink}>Đăng nhập</Text>
                 </TouchableOpacity>
               </View>
             </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Xác nhận mật khẩu</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="checkmark-circle" size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nhập lại mật khẩu"
-                  placeholderTextColor="#666"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!isPasswordVisible}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-              </View>
-              {confirmPasswordError ? (
-                <Text style={styles.errorText}>{confirmPasswordError}</Text>
-              ) : null}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.disabledButton]}
-              onPress={handleRegister}
-              disabled={isLoading}
-            >
-              <Text style={styles.loginButtonText}>
-                {isLoading ? 'Đang tạo tài khoản...' : 'Đăng ký'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.signUpContainer}>
-              <Text style={styles.signUpText}>Đã có tài khoản? </Text>
-              <TouchableOpacity onPress={() => navigation.replace('Login')}>
-                <Text style={styles.signUpLink}>Đăng nhập</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a1a' },
-  keyboardAvoidingView: { flex: 1 },
-  scrollContainer: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20 },
-  formContainer: {
-    backgroundColor: '#2d2d2d',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    elevation: 8,
+  container: {
+    flex: 1,
   },
-  title: {
-    fontSize: 24,
+  safeArea: {
+    flex: 1,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
+    justifyContent: 'center',
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoContainer: {
+    marginBottom: 20,
+  },
+  welcomeText: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 24,
   },
-  inputContainer: { marginBottom: 20 },
-  label: {
-    fontSize: 16,
-    color: '#4CAF50',
-    marginBottom: 8,
-    fontWeight: '600',
+  formContainer: {
+    backgroundColor: 'rgba(45, 45, 45, 0.9)',
+    borderRadius: 20,
+    padding: 24,
+  },
+  inputContainer: {
+    marginBottom: 20,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'rgba(26, 26, 26, 0.8)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 16,
+    minHeight: 50,
   },
-  inputIcon: { marginRight: 12 },
+  inputWrapperError: {
+    borderColor: '#FF6B6B',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
   input: {
     flex: 1,
-    paddingVertical: 16,
     fontSize: 16,
     color: '#fff',
+    paddingVertical: 0,
   },
-  eyeButton: { padding: 8 },
-  loginButton: {
-    backgroundColor: '#4CAF50',
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#fff',
+    paddingVertical: 0,
+  },
+  eyeButton: {
+    padding: 8,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    marginTop: 8,
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  registerButton: {
     borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
+    overflow: 'hidden',
+    marginTop: 20,
     marginBottom: 24,
   },
   disabledButton: {
-    backgroundColor: '#666',
+    opacity: 0.7,
   },
-  loginButtonText: {
+  registerButtonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  registerButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  signUpContainer: {
+  loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 12,
+    alignItems: 'center',
   },
-  signUpText: { color: '#999', fontSize: 14 },
-  signUpLink: { color: '#4CAF50', fontSize: 14, fontWeight: '600' },
-  errorText: {
-    color: 'red',
-    marginTop: 4,
-    marginLeft: 8,
-    fontSize: 13,
+  loginText: {
+    color: '#B0B0B0',
+    fontSize: 14,
+  },
+  loginLink: {
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

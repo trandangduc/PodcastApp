@@ -1,4 +1,3 @@
-// DetailsProfileScreen - Responsive
 import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
@@ -6,49 +5,68 @@ import {
   View,
   Text,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ Add import
-import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { getProfile } from '../../services/api/profileService';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/types';
+import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { getProfile, updateProfile } from '../../services/api/profileService';
+import { useNavigation } from '@react-navigation/native';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
-const DetailsProfileScreen = () => {
-  const navigation = useNavigation<NavigationProp>();
-  const insets = useSafeAreaInsets(); // ✅ Add hook
+const EditProfileScreen = () => {
+  const navigation = useNavigation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const isFocused = useIsFocused();
+  const [hoTen, setHoTen] = useState('');
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        setLoading(true);
         const res = await getProfile();
         setUser(res);
+        setHoTen(res.ho_ten || '');
+        setEmail(res.email || '');
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Lỗi khi tải thông tin:', error);
       } finally {
         setLoading(false);
       }
     };
+    fetchUser();
+  }, []);
 
-    if (isFocused) {
-      fetchUser();
+  const isChanged = hoTen !== user?.ho_ten || email !== user?.email;
+
+  const handleSave = async () => {
+    if (!hoTen || !email) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ họ tên và email');
+      return;
     }
-  }, [isFocused]);
+
+    try {
+      setSubmitting(true);
+      const res = await updateProfile({ ho_ten: hoTen, email });
+      Alert.alert('Thành công', res.message, [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error: any) {
+      const errMsg =
+        error?.response?.data?.error || 'Có lỗi xảy ra. Vui lòng thử lại.';
+      Alert.alert('Lỗi', errMsg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Đang tải thông tin...</Text>
+          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
         </View>
       </SafeAreaView>
     );
@@ -56,41 +74,34 @@ const DetailsProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* ✅ Responsive header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.headerText}>Thông Tin Cá Nhân</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('EditProfileScreen')}>
-          <Feather name="edit" size={22} color="#fff" style={styles.editIcon} />
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Chỉnh sửa hồ sơ</Text>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={!isChanged || submitting}
+          style={{ opacity: isChanged ? 1 : 0.3 }}
+        >
+          <Feather name="save" size={22} color="#4CAF50" style={styles.editIcon} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 40 } // ✅ Responsive bottom
-        ]}
-      >
+      <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.avatarContainer}>
           <MaterialIcons name="account-circle" size={100} color="#4CAF50" />
         </View>
 
-        <View style={styles.infoSection}>
-          <ProfileItem label="Họ tên" value={user?.ho_ten} icon="person-outline" />
-          <ProfileItem label="Email" value={user?.email} icon="mail-outline" />
-          <ProfileItem
-            label="Vai trò"
-            value={user?.vai_tro === 'admin' ? 'Quản trị viên' : 'Người dùng'}
-            icon="shield-checkmark-outline"
+        <View style={styles.formSection}>
+          <InputItem
+            label="Họ tên"
+            value={hoTen}
+            onChangeText={setHoTen}
+            icon={<Feather name="user" size={20} color="#4CAF50" style={{ marginRight: 8 }} />}
           />
-          <ProfileItem
-            label="Ngày tạo"
-            value={new Date(user?.ngay_tao).toLocaleString()}
-            icon="calendar-outline"
-          />
-          <ProfileItem
-            label="Kích hoạt"
-            value={user?.kich_hoat ? 'Đã kích hoạt' : 'Chưa kích hoạt'}
-            icon="checkmark-done-circle-outline"
+          <InputItem
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            icon={<Feather name="mail" size={20} color="#4CAF50" style={{ marginRight: 8 }} />}
           />
         </View>
       </ScrollView>
@@ -98,21 +109,29 @@ const DetailsProfileScreen = () => {
   );
 };
 
-const ProfileItem = ({
+const InputItem = ({
   label,
   value,
+  onChangeText,
   icon,
 }: {
   label: string;
   value: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  onChangeText: (text: string) => void;
+  icon: React.ReactNode;
 }) => (
-  <View style={styles.itemContainer}>
-    <View style={styles.leftSection}>
-      <Ionicons name={icon} size={18} color="#4CAF50" style={styles.icon} />
-      <Text style={styles.label}>{label}</Text>
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={styles.inputWrapper}>
+      {icon}
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={`Nhập ${label.toLowerCase()}`}
+        placeholderTextColor="#888"
+      />
     </View>
-    <Text style={styles.value}>{value}</Text>
   </View>
 );
 
@@ -122,7 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
   },
   content: {
-    flexGrow: 1, // ✅ Changed from paddingBottom: 40
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -136,13 +155,12 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 16, // ✅ Remove paddingVertical: 16
+    paddingVertical: 16,
     borderBottomColor: '#333',
     borderBottomWidth: 1,
-    backgroundColor: '#1a1a1a', // ✅ Add background
+    alignItems: 'center',
   },
   headerText: {
     color: '#fff',
@@ -154,41 +172,35 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     alignItems: 'center',
-    backgroundColor: '#2e2a28ff',
+    backgroundColor: '#2e2a28',
     paddingVertical: 32,
     marginBottom: 16,
   },
-  infoSection: {
+  formSection: {
     backgroundColor: '#2d2d2d',
     paddingHorizontal: 20,
-    paddingBottom: 20, // ✅ Add padding bottom
   },
-  itemContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#444',
-    paddingVertical: 16,
-  },
-  leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  icon: {
-    marginRight: 8,
+  inputContainer: {
+    marginBottom: 16,
   },
   label: {
     color: '#ccc',
     fontSize: 14,
+    marginBottom: 4,
   },
-  value: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3a3a3a',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  input: {
+    flex: 1,
     color: '#fff',
     fontSize: 16,
-    flex: 1.2,
-    textAlign: 'right',
   },
 });
 
-export default DetailsProfileScreen;
+export default EditProfileScreen;

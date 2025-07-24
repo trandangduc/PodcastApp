@@ -8,11 +8,16 @@ import {
   Image,
   Alert,
   RefreshControl,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import favoritesService, { FavoritePodcast } from '../../services/api/favoritesService';
+
+const { width } = Dimensions.get('window');
 
 const FavoritesScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -67,7 +72,6 @@ const FavoritesScreen: React.FC = () => {
             try {
               await favoritesService.removeFromFavorites(podcastId);
               setFavorites(prev => prev.filter(item => item.id !== podcastId));
-              Alert.alert('Thành công', 'Đã xóa khỏi danh sách yêu thích');
             } catch (error: any) {
               Alert.alert('Lỗi', error.message || 'Không thể xóa khỏi danh sách yêu thích');
             }
@@ -79,7 +83,7 @@ const FavoritesScreen: React.FC = () => {
 
   const handleClearAllFavorites = () => {
     if (favorites.length === 0) return;
-
+    
     Alert.alert(
       'Xóa tất cả',
       'Bạn có chắc chắn muốn xóa tất cả podcast khỏi danh sách yêu thích?',
@@ -92,7 +96,6 @@ const FavoritesScreen: React.FC = () => {
             try {
               await favoritesService.clearAllFavorites();
               setFavorites([]);
-              Alert.alert('Thành công', 'Đã xóa tất cả podcast yêu thích');
             } catch (error: any) {
               Alert.alert('Lỗi', error.message || 'Không thể xóa danh sách yêu thích');
             }
@@ -128,83 +131,130 @@ const FavoritesScreen: React.FC = () => {
     }
   };
 
-  const renderFavoriteItem = ({ item }: { item: FavoritePodcast }) => (
+  const renderFavoriteItem = ({ item, index }: { item: FavoritePodcast; index: number }) => (
     <TouchableOpacity 
-      style={styles.favoriteItem} 
+      style={[styles.favoriteItem, index === 0 && styles.firstItem]} 
       onPress={() => handlePodcastPress(item)}
+      activeOpacity={0.7}
     >
-      <Image 
-        source={{ 
-          uri: item.thumbnail || 'https://via.placeholder.com/60x60/1e1e1e/4CAF50?text=No+Image' 
-        }} 
-        style={styles.thumbnail} 
-      />
-      <View style={styles.contentContainer}>
-        <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.addedDate}>Đã thêm {formatDate(item.addedAt)}</Text>
+      <View style={styles.itemContent}>
+        <Image 
+          source={{ 
+            uri: item.thumbnail || 'https://via.placeholder.com/56x56/282828/1DB954?text=♪' 
+          }} 
+          style={styles.thumbnail} 
+        />
+        <View style={styles.contentContainer}>
+          <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            Đã thêm {formatDate(item.addedAt)}
+          </Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.removeButton}
+          onPress={() => handleRemoveFromFavorites(item.id)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="heart" size={20} color="#1DB954" />
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity 
-        style={styles.removeButton}
-        onPress={() => handleRemoveFromFavorites(item.id)}
-      >
-        <Ionicons name="heart" size={24} color="#ff4444" />
-      </TouchableOpacity>
     </TouchableOpacity>
   );
 
-  // ✅ Đã bỏ icon back
   const renderHeader = () => (
-    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-      <Text style={styles.headerTitle}>Yêu thích ({favorites.length})</Text>
-      <TouchableOpacity 
-        style={styles.clearButton}
-        onPress={handleClearAllFavorites}
-      >
-        <Ionicons name="trash-outline" size={24} color="#ff4444" />
-      </TouchableOpacity>
-    </View>
+    <LinearGradient
+      colors={['#1DB954', '#1ed760', '#121212']}
+      style={[styles.headerGradient, { paddingTop: insets.top }]}
+      locations={[0, 0.3, 1]}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#1DB954" />
+      
+      {/* Header với icon và title */}
+      <View style={styles.headerContent}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.moreButton}
+            onPress={handleClearAllFavorites}
+          >
+            <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Large title section */}
+        <View style={styles.titleSection}>
+          <View style={styles.playlistIconContainer}>
+            <LinearGradient
+              colors={['#1DB954', '#1ed760']}
+              style={styles.playlistIcon}
+            >
+              <Ionicons name="heart" size={60} color="#fff" />
+            </LinearGradient>
+          </View>
+          
+          <Text style={styles.playlistTitle}>Yêu thích</Text>
+          <Text style={styles.playlistInfo}>
+            {favorites.length} podcast • Được tạo bởi bạn
+          </Text>
+        </View>
+
+        {/* Action buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.shuffleButton}>
+            <Ionicons name="shuffle" size={20} color="#000" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.playButton}>
+            <Ionicons name="play" size={28} color="#000" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </LinearGradient>
   );
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="heart-outline" size={80} color="#666" />
-      <Text style={styles.emptyTitle}>Chưa có podcast yêu thích</Text>
-      <Text style={styles.emptyDescription}>
-        Hãy thêm các podcast yêu thích để dễ dàng tìm lại sau này
-      </Text>
-      <TouchableOpacity 
-        style={styles.exploreButton}
-        onPress={() => navigation.navigate('Home')}
+      <LinearGradient
+        colors={['#1DB954', '#1ed760']}
+        style={styles.emptyIcon}
       >
-        <Text style={styles.exploreButtonText}>Khám phá podcast</Text>
-      </TouchableOpacity>
+        <Ionicons name="heart-outline" size={40} color="#fff" />
+      </LinearGradient>
+      
+      <Text style={styles.emptyTitle}>Bắt đầu thêm podcast yêu thích</Text>
+      <Text style={styles.emptyDescription}>
+        Nhấn vào biểu tượng trái tim trên bất kỳ podcast nào để thêm vào đây
+      </Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {renderHeader()}
-      
       {favorites.length === 0 && !loading ? (
-        renderEmptyState()
+        <>
+          {renderHeader()}
+          {renderEmptyState()}
+        </>
       ) : (
         <FlatList
           data={favorites}
           keyExtractor={(item) => item.id}
           renderItem={renderFavoriteItem}
+          ListHeaderComponent={renderHeader}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#4CAF50"
-              colors={['#4CAF50']}
+              tintColor="#1DB954"
+              colors={['#1DB954']}
+              progressViewOffset={300}
             />
           }
           contentContainerStyle={[
             styles.listContainer,
-            { paddingBottom: insets.bottom + 20 }
+            { paddingBottom: insets.bottom + 100 }
           ]}
           showsVerticalScrollIndicator={false}
+          stickyHeaderIndices={[]}
         />
       )}
     </View>
@@ -216,45 +266,105 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between', // ✅ Giữ space-between để title căn giữa và nút clear ở bên phải
+  headerGradient: {
+    paddingBottom: 20,
+  },
+  headerContent: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: '#1a1a1a',
   },
-  // ✅ Đã xóa backButton style vì không cần nữa
-  headerTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1, // ✅ Giữ flex: 1 để title vẫn căn giữa
-    textAlign: 'center',
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
-  clearButton: {
+
+  moreButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  titleSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  playlistIconContainer: {
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  playlistIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playlistTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  playlistInfo: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 20,
+  },
+  shuffleButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  playButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1DB954',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 'auto',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   listContainer: {
-    padding: 16,
+    paddingTop: 0,
   },
   favoriteItem: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  firstItem: {
+    paddingTop: 16,
+  },
+  itemContent: {
     flexDirection: 'row',
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
     alignItems: 'center',
   },
   thumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: 56,
+    height: 56,
+    borderRadius: 4,
   },
   contentContainer: {
     flex: 1,
@@ -264,12 +374,13 @@ const styles = StyleSheet.create({
   title: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontWeight: '600',
+    marginBottom: 2,
   },
-  addedDate: {
-    color: '#aaa',
-    fontSize: 12,
+  subtitle: {
+    color: '#b3b3b3',
+    fontSize: 14,
+    fontWeight: '400',
   },
   removeButton: {
     padding: 8,
@@ -278,30 +389,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   emptyTitle: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 8,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyDescription: {
-    color: '#aaa',
-    fontSize: 14,
+    color: '#b3b3b3',
+    fontSize: 16,
     textAlign: 'center',
-    paddingHorizontal: 40,
-    marginBottom: 30,
+    lineHeight: 22,
+    marginBottom: 32,
   },
-  exploreButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 30,
+  browseButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 25,
   },
-  exploreButtonText: {
-    color: '#fff',
+  browseButtonText: {
+    color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
   },

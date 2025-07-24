@@ -10,22 +10,28 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import authService from '../../services/api/authService';
-// Import useAuth context để có thể cập nhật trạng thái auth
 import { useAuth } from '../../contexts/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { logout: contextLogout } = useAuth(); // Sử dụng logout từ AuthContext
+  const { logout: contextLogout } = useAuth();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -59,17 +65,9 @@ const ProfileScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Gọi logout từ authService
               await authService.logout();
               authService.removeAuthHeader();
-              
-              // Gọi logout từ AuthContext để cập nhật state global
-              // AuthContext sẽ tự động điều hướng về Auth screen
               await contextLogout();
-              
-              // Không cần dùng navigation.dispatch ở đây nữa
-              // vì AuthContext đã handle việc này trong AppNavigator
-              
             } catch (error) {
               console.error('Logout error:', error);
               Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
@@ -113,72 +111,134 @@ const ProfileScreen: React.FC = () => {
     },
   ];
 
+  const getUserInitials = (name: string) => {
+    return name
+      ?.split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'U';
+  };
+
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#121212" />
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Đang tải...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Hồ sơ</Text>
-        </View>
-
-        {/* User Info Card */}
-        <View style={styles.userCard}>
-          <View style={styles.avatarContainer}>
-            <MaterialIcons name="account-circle" size={80} color="#4CAF50" />
-          </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.ho_ten || 'Không có tên'}</Text>
-            <Text style={styles.userEmail}>{user?.email || 'Không có email'}</Text>
-            <View style={styles.roleContainer}>
-              <Text style={styles.roleLabel}>Vai trò: </Text>
-              <Text style={styles.roleValue}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1DB954" />
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingBottom: insets.bottom + 20 }
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header với Gradient */}
+        <LinearGradient
+          colors={['#1DB954', '#1ed760', '#121212']}
+          style={[styles.headerGradient, { paddingTop: insets.top }]}
+          locations={[0, 0.4, 1]}
+        >
+          <View style={styles.headerContent}>
+            {/* Profile Info */}
+            <View style={styles.profileSection}>
+              <View style={styles.avatarContainer}>
+                <LinearGradient
+                  colors={['#1DB954', '#1ed760']}
+                  style={styles.avatarGradient}
+                >
+                  <Text style={styles.avatarText}>
+                    {getUserInitials(user?.ho_ten || 'User')}
+                  </Text>
+                </LinearGradient>
+              </View>
+              
+              <Text style={styles.userName}>{user?.ho_ten || 'Không có tên'}</Text>
+              <Text style={styles.userStats}>
                 {user?.vai_tro === 'admin' ? 'Quản trị viên' : 'Người dùng'}
               </Text>
             </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity style={styles.followButton}>
+                <Text style={styles.followButtonText}>Chỉnh sửa hồ sơ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* User Email Card */}
+        <View style={styles.emailCard}>
+          <View style={styles.emailIconContainer}>
+            <Ionicons name="mail" size={20} color="#1DB954" />
+          </View>
+          <View style={styles.emailContent}>
+            <Text style={styles.emailLabel}>Email</Text>
+            <Text style={styles.emailValue}>{user?.email || 'Không có email'}</Text>
           </View>
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.menuItem}
-              onPress={item.onPress}
-            >
-              <View style={styles.menuItemLeft}>
-                <Ionicons name={item.icon as any} size={24} color="#4CAF50" />
-                <Text style={styles.menuItemText}>{item.title}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-          ))}
+        {/* Menu Section */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Tùy chọn</Text>
+          
+          <View style={styles.menuContainer}>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.menuItem,
+                  index === menuItems.length - 1 && styles.lastMenuItem
+                ]}
+                onPress={item.onPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={styles.menuIconContainer}>
+                    <Ionicons name={item.icon as any} size={22} color="#b3b3b3" />
+                  </View>
+                  <Text style={styles.menuItemText}>{item.title}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#404040" />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#fff" />
-          <Text style={styles.logoutButtonText}>Đăng xuất</Text>
-        </TouchableOpacity>
+        {/* Logout Section */}
+        <View style={styles.logoutSection}>
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="log-out-outline" size={22} color="#fff" />
+            <Text style={styles.logoutButtonText}>Đăng xuất</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#121212',
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -189,95 +249,161 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#fff',
+    color: '#b3b3b3',
     fontSize: 16,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+  headerGradient: {
+    paddingBottom: 30,
   },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+  headerContent: {
+    paddingHorizontal: 24,
   },
-  userCard: {
-    backgroundColor: '#2d2d2d',
-    margin: 20,
-    borderRadius: 16,
-    padding: 20,
+  profileSection: {
     alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 24,
   },
   avatarContainer: {
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  userInfo: {
+  avatarGradient: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   userName: {
-    color: '#fff',
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: 'bold',
+    color: '#fff',
     marginBottom: 4,
+    textAlign: 'center',
   },
-  userEmail: {
-    color: '#999',
+  userStats: {
     fontSize: 14,
-    marginBottom: 8,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
   },
-  roleContainer: {
-    flexDirection: 'row',
+  actionButtonsContainer: {
     alignItems: 'center',
   },
-  roleLabel: {
-    color: '#999',
-    fontSize: 14,
+  followButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#fff',
+    paddingHorizontal: 32,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-  roleValue: {
-    color: '#4CAF50',
+  followButtonText: {
+    color: '#fff',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
+  },
+  emailCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 8,
+  },
+  emailIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(29, 185, 84, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  emailContent: {
+    flex: 1,
+  },
+  emailLabel: {
+    fontSize: 12,
+    color: '#b3b3b3',
+    marginBottom: 2,
+  },
+  emailValue: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  menuSection: {
+    marginTop: 32,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 16,
+    paddingHorizontal: 8,
   },
   menuContainer: {
-    backgroundColor: '#2d2d2d',
-    marginHorizontal: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#444',
+    borderBottomColor: '#282828',
+  },
+  lastMenuItem: {
+    borderBottomWidth: 0,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  menuIconContainer: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   menuItemText: {
     color: '#fff',
     fontSize: 16,
-    marginLeft: 16,
+    fontWeight: '400',
+  },
+  logoutSection: {
+    paddingHorizontal: 16,
+    marginTop: 32,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ff4444',
-    marginHorizontal: 20,
-    marginTop: 24,
+    backgroundColor: '#1a1a1a',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#404040',
   },
   logoutButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
     marginLeft: 8,
   },
 });
