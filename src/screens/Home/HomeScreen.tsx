@@ -14,6 +14,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
@@ -45,12 +46,65 @@ import {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Cache configuration
+const CACHE_KEYS = {
+  FEATURED_PODCASTS: 'home_featured_podcasts',
+  RECENT_PODCASTS: 'home_recent_podcasts', 
+  RECOMMENDED_PODCASTS: 'home_recommended_podcasts',
+  CATEGORIES: 'home_categories',
+  CACHE_TIMESTAMP: 'home_cache_timestamp',
+  DATA_LOADED: 'home_data_loaded'
+};
+
+const CACHE_DURATION = 30 * 60 * 1000; // 30 phút
+
 // Interface cho featured podcasts với các thuộc tính bổ sung để hiển thị
 interface FeaturedPodcast extends Podcast {
   thumbnail?: string;
   title?: string;
   description?: string;
 }
+
+// Cache utilities
+const saveToCache = async (key: string, data: any) => {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(data));
+    await AsyncStorage.setItem(CACHE_KEYS.CACHE_TIMESTAMP, Date.now().toString());
+  } catch (error) {
+    console.error('Error saving to cache:', error);
+  }
+};
+
+const getFromCache = async (key: string) => {
+  try {
+    const data = await AsyncStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('Error reading from cache:', error);
+    return null;
+  }
+};
+
+const isCacheValid = async () => {
+  try {
+    const timestamp = await AsyncStorage.getItem(CACHE_KEYS.CACHE_TIMESTAMP);
+    if (!timestamp) return false;
+    
+    const cacheAge = Date.now() - parseInt(timestamp);
+    return cacheAge < CACHE_DURATION;
+  } catch (error) {
+    return false;
+  }
+};
+
+const clearCache = async () => {
+  try {
+    const keys = Object.values(CACHE_KEYS);
+    await AsyncStorage.multiRemove(keys);
+  } catch (error) {
+    console.error('Error clearing cache:', error);
+  }
+};
 
 const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -70,61 +124,131 @@ const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Animation for modal
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  
+  // Track if this is the first time loading data
+  const isFirstLoad = useRef(true);
 
-  // Load home data
+  // Load home data with caching logic
   useEffect(() => {
-    if (isAuthenticated && isFocused) {
-      loadHomeData();
+    if (isAuthenticated) {
+      // Chỉ load khi lần đầu vào app hoặc khi focus lại và chưa có dữ liệu
+      if (isFirstLoad.current || (isFocused && !dataLoaded)) {
+        loadHomeData();
+        isFirstLoad.current = false;
+      }
     }
-  }, [isAuthenticated, isFocused]);
+  }, [isAuthenticated, isFocused, dataLoaded]);
 
-  const loadHomeData = async () => {
+  const loadCachedData = async () => {
+    try {
+      const [cachedFeatured, cachedRecent, cachedRecommended, cachedCategories] = await Promise.all([
+        getFromCache(CACHE_KEYS.FEATURED_PODCASTS),
+        getFromCache(CACHE_KEYS.RECENT_PODCASTS),
+        getFromCache(CACHE_KEYS.RECOMMENDED_PODCASTS),
+        getFromCache(CACHE_KEYS.CATEGORIES)
+      ]);
+
+      if (cachedFeatured && cachedRecent && cachedRecommended && cachedCategories) {
+        setFeaturedPodcasts(cachedFeatured);
+        setRecentPodcasts(cachedRecent);
+        setRecommendedPodcasts(cachedRecommended);
+        setCategories(cachedCategories);
+        setDataLoaded(true);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading cached data:', error);
+      return false;
+    }
+  };
+
+  const loadHomeData = async (forceRefresh = false) => {
     try {
       setLoading(true);
       
-      // Load featured podcasts
-      const popularResponse = await podcastService.getPopularPodcasts(1, 6);
+      // Kiểm tra cache nếu không force refresh
+      if (!forceRefresh && await isCacheValid()) {
+        const cacheLoaded = await loadCachedData();
+        if (cacheLoaded) {
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Nếu cache không hợp lệ hoặc force refresh, load từ API
+      console.log('Loading fresh data from API...');
+      
+      // Load tất cả API song song để tăng tốc
+      const [popularResponse, recentResponse, recommendedResponse, categoriesData] = await Promise.all([
+        podcastService.getPopularPodcasts(1, 6),
+        podcastService.getPopularPodcasts(1, 6), // Có thể thay bằng API khác cho recent
+        podcastService.getRecommendedPodcasts(1, 20),
+        categoriesService.getActiveCategories(50)
+      ]);
+
+      // Process featured podcasts
       const featured = popularResponse.data.map((podcast): FeaturedPodcast => ({
-        ...podcast, // Spread all properties from original podcast
+        ...podcast,
         thumbnail: podcast.hinh_anh_dai_dien || 'https://via.placeholder.com/140x140/282828/1DB954?text=P',
-        title: podcast.tieu_de, // Map tieu_de to title for compatibility
+        title: podcast.tieu_de,
         description: podcast.mo_ta,
       }));
+
+      // Update states
       setFeaturedPodcasts(featured);
-
-      // Load recent podcasts for quick access
-      const recentResponse = await podcastService.getPopularPodcasts(1, 6);
       setRecentPodcasts(recentResponse.data);
-
-      // Load recommended podcasts
-      const recommendedResponse = await podcastService.getRecommendedPodcasts(1, 20);
       setRecommendedPodcasts(recommendedResponse.data);
-
-      // Load categories
-      const categoriesData = await categoriesService.getActiveCategories(50);
       setCategories(categoriesData);
+      setDataLoaded(true);
+
+      // Save to cache
+      await Promise.all([
+        saveToCache(CACHE_KEYS.FEATURED_PODCASTS, featured),
+        saveToCache(CACHE_KEYS.RECENT_PODCASTS, recentResponse.data),
+        saveToCache(CACHE_KEYS.RECOMMENDED_PODCASTS, recommendedResponse.data),
+        saveToCache(CACHE_KEYS.CATEGORIES, categoriesData)
+      ]);
+
+      console.log('Data cached successfully');
    
     } catch (error) {
       console.error('HomeScreen: Error loading home data:', error);
-      setFeaturedPodcasts([]);
-      setRecentPodcasts([]);
-      setRecommendedPodcasts([]);
-      setCategories([]);
+      
+      // Fallback to cache if API fails
+      const cacheLoaded = await loadCachedData();
+      if (!cacheLoaded) {
+        // Reset states if no cache available
+        setFeaturedPodcasts([]);
+        setRecentPodcasts([]);
+        setRecommendedPodcasts([]);
+        setCategories([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Pull to refresh
+  // Pull to refresh - force reload
   const onRefresh = useCallback(async () => {
     if (!isAuthenticated) return;
     
     setRefreshing(true);
-    await loadHomeData();
+    await loadHomeData(true); // Force refresh
     setRefreshing(false);
+  }, [isAuthenticated]);
+
+  // Clear cache when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      clearCache();
+      setDataLoaded(false);
+      isFirstLoad.current = true;
+    }
   }, [isAuthenticated]);
 
   // Search function
@@ -169,12 +293,10 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('PodcastDetail', { podcastId: item.id });
   }, [navigation]);
 
-  // Fix: Tạo wrapper function cho QuickAccessSection
   const handleQuickAccessPodcastPress = useCallback((podcast: Podcast) => {
     handlePodcastPress(podcast);
   }, [handlePodcastPress]);
 
-  // Fix: Tạo wrapper function cho Featured Podcasts
   const handleFeaturedPodcastPress = useCallback((item: FeaturedPodcast) => {
     handlePodcastPress(item);
   }, [handlePodcastPress]);
@@ -255,7 +377,6 @@ const HomeScreen: React.FC = () => {
         </View>
       );
     }
-
     return (
       <>
         {/* Quick Access Section - like Spotify's recent items */}
@@ -263,7 +384,6 @@ const HomeScreen: React.FC = () => {
           recentPodcasts={recentPodcasts}
           onPodcastPress={handleQuickAccessPodcastPress}
         />
-
         {/* Featured Podcasts */}
         <SectionHeader title="Nổi bật hôm nay" onSeeAll={handleSeeAllPodcasts} />
         <FlatList
@@ -277,14 +397,12 @@ const HomeScreen: React.FC = () => {
           maxToRenderPerBatch={4}
           windowSize={5}
         />
-
         {/* Categories Grid */}
         <CategoriesGrid 
           categories={categories}
           onCategoryPress={handleCategoryPress}
           onShowAllCategories={handleShowAllCategories}
         />
-
         {/* Recommended Section */}
         <SectionHeader title="Đề xuất cho bạn" showSeeAll={false} />
       </>

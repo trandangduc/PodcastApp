@@ -13,14 +13,13 @@ import {
   Platform,
   Modal,
   AppState,
-  AppStateStatus 
+  AppStateStatus
 } from 'react-native';
-import { Audio, AVPlaybackStatus, AVPlaybackStatusSuccess, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Notifications from 'expo-notifications';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import podcastService from '../../services/api/podcastService';
 import { Podcast } from '../../types';
 import { saveToHistory } from '../../services/api/historyService';
@@ -29,41 +28,33 @@ const { width, height } = Dimensions.get('window');
 const isTablet = width >= 768;
 const DISC_SIZE = isTablet ? 320 : 280;
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: false, // Không hiển thị popup khi app đang mở
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true, // Hiển thị banner notification
-    shouldShowList: true, // Hiển thị trong notification list
-  }),
-});
-
-
 const AudioPlayerScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const podcastId = route.params?.podcastId;
-  
+
   const [podcast, setPodcast] = useState<Podcast | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [position, setPosition] = useState(0);
   const [volume, setVolume] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [isRepeat, setIsRepeat] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [showControlsModal, setShowControlsModal] = useState(false);
-  
-  const sound = useRef<Audio.Sound | null>(null);
+
+  // Audio state management
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
+
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const modalAnim = useRef(new Animated.Value(0)).current;
   const rotateLoop = useRef<Animated.CompositeAnimation | null>(null);
   const appState = useRef(AppState.currentState);
-  const notificationListener = useRef<any>(null);
+
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     StatusBar.setBarStyle('light-content', true);
@@ -71,15 +62,10 @@ const AudioPlayerScreen: React.FC = () => {
       StatusBar.setBackgroundColor('transparent', true);
       StatusBar.setTranslucent(true);
     }
-    
-    // Cấu hình audio cho background playback
+
     configureAudioSession();
-    
-    // Setup notifications
-    setupNotifications();
-    
     loadPodcast();
-    
+
     // Fade in animation
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -87,158 +73,26 @@ const AudioPlayerScreen: React.FC = () => {
       useNativeDriver: true,
     }).start();
 
-    // Listen for app state changes
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+
     return () => {
-      if (sound.current) sound.current.unloadAsync();
+      // Cleanup audio properly
+      if (sound) {
+        sound.unloadAsync().catch(console.error);
+      }
       rotateAnim.stopAnimation();
       subscription?.remove();
-      notificationListener.current?.remove();
-      // Xóa notification khi component unmount
-      Notifications.dismissAllNotificationsAsync();
     };
   }, []);
 
-  const setupNotifications = async () => {
-    // Request permissions
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      console.log('Notification permissions not granted');
-      return;
+  // Watch for playing state changes
+  useEffect(() => {
+    if (isPlaying) {
+      startRotation();
+    } else {
+      stopRotation();
     }
-
-    // Listen for notification interactions
-    notificationListener.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const action = response.actionIdentifier;
-        handleNotificationAction(action);
-      }
-    );
-  };
-
-  const handleNotificationAction = async (action: string) => {
-    switch (action) {
-      case 'play_pause':
-        await togglePlayback();
-        break;
-      case 'skip_back':
-        await skipBack();
-        break;
-      case 'skip_forward':
-        await skipForward();
-        break;
-      case 'stop':
-        await stopPlayback();
-        break;
-    }
-  };
-
-  const createMediaNotification = async () => {
-    if (!podcast) return;
-
-    try {
-      // Tạo notification với media controls
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: podcast.tieu_de,
-          body: 'Podcast đang phát',
-          data: { type: 'media_player' },
-          categoryIdentifier: 'media_controls',
-          sound: false,
-          // Android specific
-          ...Platform.select({
-            android: {
-              priority: Notifications.AndroidNotificationPriority.HIGH,
-              sticky: true, // Không thể swipe để xóa
-              ongoing: true, // Notification liên tục
-              channelId: 'media_playback',
-            },
-          }),
-        },
-        trigger: null,
-      });
-
-      // Tạy notification category với actions
-      await Notifications.setNotificationCategoryAsync('media_controls', [
-        {
-          identifier: 'skip_back',
-          buttonTitle: '⏮️',
-          options: { opensAppToForeground: false },
-        },
-        {
-          identifier: 'play_pause',
-          buttonTitle: isPlaying ? '⏸️' : '▶️',
-          options: { opensAppToForeground: false },
-        },
-        {
-          identifier: 'skip_forward',
-          buttonTitle: '⏭️',
-          options: { opensAppToForeground: false },
-        },
-        {
-          identifier: 'stop',
-          buttonTitle: '⏹️',
-          options: { opensAppToForeground: false },
-        },
-      ]);
-
-    } catch (error) {
-      console.error('Error creating media notification:', error);
-    }
-  };
-
-  const updateNotificationPlayState = async () => {
-    if (!podcast) return;
-
-    try {
-      // Cập nhật notification với trạng thái play/pause mới
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: podcast.tieu_de,
-          body: isPlaying ? 'Đang phát...' : 'Tạm dừng',
-          data: { type: 'media_player' },
-          categoryIdentifier: 'media_controls',
-          sound: false,
-          ...Platform.select({
-            android: {
-              priority: Notifications.AndroidNotificationPriority.HIGH,
-              sticky: true,
-              ongoing: isPlaying,
-              channelId: 'media_playback',
-            },
-          }),
-        },
-        trigger: null,
-      });
-
-      // Cập nhật category với button mới
-      await Notifications.setNotificationCategoryAsync('media_controls', [
-        {
-          identifier: 'skip_back',
-          buttonTitle: '⏮️',
-          options: { opensAppToForeground: false },
-        },
-        {
-          identifier: 'play_pause',
-          buttonTitle: isPlaying ? '⏸️' : '▶️',
-          options: { opensAppToForeground: false },
-        },
-        {
-          identifier: 'skip_forward',
-          buttonTitle: '⏭️',
-          options: { opensAppToForeground: false },
-        },
-        {
-          identifier: 'stop',
-          buttonTitle: '⏹️',
-          options: { opensAppToForeground: false },
-        },
-      ]);
-    } catch (error) {
-      console.error('Error updating notification:', error);
-    }
-  };
+  }, [isPlaying]);
 
   const configureAudioSession = async () => {
     try {
@@ -251,31 +105,28 @@ const AudioPlayerScreen: React.FC = () => {
         interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
         playThroughEarpieceAndroid: false,
       });
-
-      // Tạo notification channel cho Android
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('media_playback', {
-          name: 'Media Playback',
-          importance: Notifications.AndroidImportance.LOW,
-          vibrationPattern: [0],
-          sound: null,
-          enableVibrate: false,
-        });
-      }
     } catch (error) {
       console.error('Error configuring audio session:', error);
     }
   };
 
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
-    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('App has come to the foreground!');
-    } else if (nextAppState === 'background' && isPlaying && podcast) {
-      console.log('App has gone to the background!');
-      // Tạo media notification khi app chuyển sang background
-      createMediaNotification();
-    }
     appState.current = nextAppState;
+  };
+
+  const onPlaybackStatusUpdate = (status: any) => {
+    if (!status.isLoaded) return;
+
+    setPosition(status.positionMillis || 0);
+    setDuration(status.durationMillis || 0);
+    setIsPlaying(status.isPlaying || false);
+    setIsBuffering(status.isBuffering || false);
+
+    if (status.didJustFinish && !isRepeat) {
+      setIsPlaying(false);
+      setPosition(0);
+      stopRotation();
+    }
   };
 
   const loadPodcast = async () => {
@@ -283,8 +134,27 @@ const AudioPlayerScreen: React.FC = () => {
       const res = await podcastService.getPodcastById(podcastId);
       const episode = res.data;
       setPodcast(episode);
-      await playAudio(episode.duong_dan_audio);
-      
+
+      // Unload previous sound if exists
+      if (sound) {
+        await sound.unloadAsync();
+      }
+
+      // Create and load new sound
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: episode.duong_dan_audio },
+        {
+          shouldPlay: true,
+          isLooping: isRepeat,
+          volume: volume,
+          rate: speed,
+          progressUpdateIntervalMillis: 1000,
+        },
+        onPlaybackStatusUpdate
+      );
+
+      setSound(newSound);
+
       await saveToHistory({
         id: episode.id,
         title: episode.tieu_de,
@@ -298,75 +168,9 @@ const AudioPlayerScreen: React.FC = () => {
     }
   };
 
-  const playAudio = async (url: string) => {
-    try {
-      if (sound.current) {
-        await sound.current.unloadAsync();
-      }
-
-      const { sound: newSound, status } = await Audio.Sound.createAsync(
-        { uri: url },
-        {
-          shouldPlay: true,
-          isLooping: isRepeat,
-          volume,
-          rate: speed,
-          progressUpdateIntervalMillis: 1000,
-        },
-        onPlaybackStatusUpdate
-      );
-      
-      sound.current = newSound;
-      
-      await newSound.setStatusAsync({
-        shouldPlay: true,
-        progressUpdateIntervalMillis: 1000,
-      });
-      
-      if (status.isLoaded) {
-        setDuration(status.durationMillis || 0);
-      }
-      setIsPlaying(true);
-      startRotation();
-
-      // Tạo notification nếu app đang ở background
-      if (appState.current === 'background') {
-        createMediaNotification();
-      }
-    } catch (error) {
-      console.error('Audio error:', error);
-    }
-  };
-
-  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (!status.isLoaded) return;
-    const loadedStatus = status as AVPlaybackStatusSuccess;
-    
-    setPosition(loadedStatus.positionMillis || 0);
-    setDuration(loadedStatus.durationMillis || 0);
-    
-    const wasPlaying = isPlaying;
-    const nowPlaying = loadedStatus.isPlaying;
-    
-    setIsPlaying(nowPlaying);
-    
-    // Cập nhật notification nếu trạng thái play thay đổi
-    if (wasPlaying !== nowPlaying && appState.current === 'background') {
-      updateNotificationPlayState();
-    }
-    
-    if (loadedStatus.didJustFinish && !isRepeat) {
-      setIsPlaying(false);
-      setPosition(0);
-      stopRotation();
-      // Xóa notification khi kết thúc
-      Notifications.dismissAllNotificationsAsync();
-    }
-  };
-
   const togglePlayback = async () => {
-    if (!sound.current) return;
-    
+    if (!sound) return;
+
     Animated.sequence([
       Animated.timing(scaleAnim, {
         toValue: 0.9,
@@ -379,83 +183,56 @@ const AudioPlayerScreen: React.FC = () => {
         useNativeDriver: true,
       }),
     ]).start();
-    
-    const status = await sound.current.getStatusAsync();
-    if (status.isLoaded && (status as AVPlaybackStatusSuccess).isPlaying) {
-      await sound.current.pauseAsync();
-      setIsPlaying(false);
-      stopRotation();
-    } else {
-      await sound.current.playAsync();
-      setIsPlaying(true);
-      startRotation();
-    }
 
-    // Cập nhật notification
-    if (appState.current === 'background') {
-      updateNotificationPlayState();
+    if (isPlaying) {
+      await sound.pauseAsync();
+    } else {
+      await sound.playAsync();
     }
   };
 
   const stopPlayback = async () => {
-    if (sound.current) {
-      await sound.current.stopAsync();
-      setIsPlaying(false);
-      setPosition(0);
-      stopRotation();
-      // Xóa notification
-      await Notifications.dismissAllNotificationsAsync();
-    }
+    if (!sound) return;
+    await sound.pauseAsync();
+    await sound.setPositionAsync(0);
   };
 
   const skipBack = async () => {
-    if (!sound.current) return;
-    const status = await sound.current.getStatusAsync();
-    if (status.isLoaded) {
-      const loadedStatus = status as AVPlaybackStatusSuccess;
-      const newPosition = Math.max(0, (loadedStatus.positionMillis || 0) - 15000);
-      await sound.current.setPositionAsync(newPosition);
-    }
+    if (!sound) return;
+    const newPosition = Math.max(0, position - 15000);
+    await sound.setPositionAsync(newPosition);
   };
 
   const skipForward = async () => {
-    if (!sound.current) return;
-    const status = await sound.current.getStatusAsync();
-    if (status.isLoaded) {
-      const loadedStatus = status as AVPlaybackStatusSuccess;
-      const currentPosition = loadedStatus.positionMillis || 0;
-      const totalDuration = loadedStatus.durationMillis || 0;
-      const newPosition = Math.min(totalDuration, currentPosition + 15000);
-      await sound.current.setPositionAsync(newPosition);
-    }
+    if (!sound) return;
+    const newPosition = Math.min(duration, position + 15000);
+    await sound.setPositionAsync(newPosition);
   };
 
   const handleSeek = async (value: number) => {
-    if (sound.current) {
-      await sound.current.setPositionAsync(value);
-      setPosition(value);
-    }
+    if (!sound) return;
+    await sound.setPositionAsync(value);
   };
 
   const changeVolume = async (value: number) => {
     setVolume(value);
-    if (sound.current) {
-      await sound.current.setVolumeAsync(value);
+    if (sound) {
+      await sound.setVolumeAsync(value);
     }
   };
 
   const changeSpeed = async (value: number) => {
     setSpeed(value);
-    if (sound.current) {
-      await sound.current.setRateAsync(value, true);
+    if (sound) {
+      await sound.setRateAsync(value, true);
     }
   };
 
   const toggleRepeat = async () => {
     const newRepeat = !isRepeat;
     setIsRepeat(newRepeat);
-    if (sound.current) {
-      await sound.current.setIsLoopingAsync(newRepeat);
+    if (sound) {
+      await sound.setIsLoopingAsync(newRepeat);
     }
   };
 
@@ -484,8 +261,8 @@ const AudioPlayerScreen: React.FC = () => {
   const formatTime = (millis: number): string => {
     const totalSeconds = Math.floor(millis / 1000);
     const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    const remainingSeconds = totalSeconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
 
   const startRotation = () => {
@@ -529,14 +306,14 @@ const AudioPlayerScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
+
       {/* Background Image with Blur */}
       <Image
         source={{ uri: podcast.hinh_anh_dai_dien }}
         blurRadius={50}
         style={StyleSheet.absoluteFillObject}
       />
-      
+
       {/* Gradient Overlay */}
       <LinearGradient
         colors={['rgba(26, 26, 46, 0.9)', 'rgba(22, 33, 62, 0.95)', 'rgba(15, 52, 96, 0.9)']}
@@ -608,9 +385,9 @@ const AudioPlayerScreen: React.FC = () => {
                 colors={['#00d4ff', '#0099cc']}
                 style={styles.playButtonGradient}
               >
-                <Ionicons 
-                  name={isPlaying ? 'pause' : 'play'} 
-                  size={36} 
+                <Ionicons
+                  name={isPlaying ? 'pause' : 'play'}
+                  size={36}
                   color="#fff"
                   style={isPlaying ? {} : { marginLeft: 3 }}
                 />
@@ -624,19 +401,148 @@ const AudioPlayerScreen: React.FC = () => {
         </View>
       </Animated.View>
 
-      {/* Controls Modal - Giữ nguyên phần Modal như code gốc */}
+      {/* Controls Modal */}
       <Modal
         visible={showControlsModal}
         transparent={true}
         animationType="none"
         onRequestClose={closeControlsModal}
       >
-        {/* Modal content giữ nguyên như code gốc */}
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={closeControlsModal} />
+          <Animated.View
+            style={[
+              styles.modalContent,
+              {
+                transform: [
+                  {
+                    translateY: modalAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [300, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Điều khiển</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={closeControlsModal}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Volume Control */}
+            <View style={styles.modalSection}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="volume-medium" size={20} color="#00d4ff" />
+                <Text style={styles.sectionTitle}>Âm lượng</Text>
+                <Text style={styles.sectionValue}>{Math.round(volume * 100)}%</Text>
+              </View>
+              <View style={styles.sliderContainer}>
+                <Ionicons name="volume-low" size={16} color="rgba(255,255,255,0.5)" />
+                <Slider
+                  style={styles.modalSlider}
+                  minimumValue={0}
+                  maximumValue={1}
+                  value={volume}
+                  minimumTrackTintColor="#00d4ff"
+                  maximumTrackTintColor="rgba(255,255,255,0.3)"
+                  thumbTintColor="#00d4ff"
+                  onValueChange={changeVolume}
+                />
+                <Ionicons name="volume-high" size={16} color="rgba(255,255,255,0.5)" />
+              </View>
+            </View>
+
+            {/* Speed Control */}
+            <View style={styles.modalSection}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="speedometer" size={20} color="#00d4ff" />
+                <Text style={styles.sectionTitle}>Tốc độ phát</Text>
+                <Text style={styles.sectionValue}>{speed}x</Text>
+              </View>
+              <View style={styles.speedGrid}>
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speedValue) => (
+                  <TouchableOpacity
+                    key={speedValue}
+                    style={[
+                      styles.speedOption,
+                      speed === speedValue && styles.speedOptionActive,
+                    ]}
+                    onPress={() => changeSpeed(speedValue)}
+                  >
+                    <Text
+                      style={[
+                        styles.speedOptionText,
+                        speed === speedValue && styles.speedOptionTextActive,
+                      ]}
+                    >
+                      {speedValue}x
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Playback Options */}
+            <View style={styles.modalSection}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="settings" size={20} color="#00d4ff" />
+                <Text style={styles.sectionTitle}>Tùy chọn</Text>
+              </View>
+              <View style={styles.optionsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    isRepeat && styles.optionButtonActive,
+                  ]}
+                  onPress={toggleRepeat}
+                >
+                  <Ionicons
+                    name="repeat"
+                    size={24}
+                    color={isRepeat ? "#fff" : "rgba(255,255,255,0.7)"}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      isRepeat && styles.optionTextActive,
+                    ]}
+                  >
+                    Lặp lại
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    isShuffle && styles.optionButtonActive,
+                  ]}
+                  onPress={toggleShuffle}
+                >
+                  <Ionicons
+                    name="shuffle"
+                    size={24}
+                    color={isShuffle ? "#fff" : "rgba(255,255,255,0.7)"}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      isShuffle && styles.optionTextActive,
+                    ]}
+                  >
+                    Ngẫu nhiên
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        </View>
       </Modal>
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

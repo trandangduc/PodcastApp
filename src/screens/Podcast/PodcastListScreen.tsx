@@ -39,13 +39,12 @@ interface SortOption {
   icon: string;
 }
 
+// Cập nhật sortOptions để loại bỏ duration sort (vì API không hỗ trợ)
 const sortOptions: SortOption[] = [
   { key: 'newest', label: 'Mới nhất', icon: 'time-outline' },
   { key: 'oldest', label: 'Cũ nhất', icon: 'time-reverse-outline' },
   { key: 'most_viewed', label: 'Lượt xem cao', icon: 'eye-outline' },
   { key: 'alphabetical', label: 'A-Z', icon: 'text-outline' },
-  { key: 'duration_desc', label: 'Dài nhất', icon: 'timer-outline' },
-  { key: 'duration_asc', label: 'Ngắn nhất', icon: 'hourglass-outline' },
 ];
 
 const PodcastListScreen: React.FC<PodcastListProps> = ({ route }) => {
@@ -120,66 +119,74 @@ const PodcastListScreen: React.FC<PodcastListProps> = ({ route }) => {
     }
   }, [loadCategories, loadCategoryById, categoryId]);
 
-  const loadPodcasts = useCallback(async (page: number = 1, isRefresh: boolean = false) => {
-    // Prevent multiple concurrent loads
-    if (isLoadingRef.current && !isRefresh) return;
+ // Trong file PodcastListScreen.tsx, cập nhật hàm loadPodcasts như sau:
+
+const loadPodcasts = useCallback(async (page: number = 1, isRefresh: boolean = false) => {
+  // Prevent multiple concurrent loads
+  if (isLoadingRef.current && !isRefresh) return;
+  
+  try {
+    isLoadingRef.current = true;
     
-    try {
-      isLoadingRef.current = true;
-      
-      if (page === 1) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-
-      let response;
-      
-      if (searchActive && searchText.trim()) {
-        // Search mode
-        response = await podcastService.searchPodcasts({
-          query: searchText.trim(),
-          page,
-          limit: 10,
-          categoryId: selectedCategory?.id || categoryId,
-        });
-      } else {
-        // Normal mode with filters
-        response = await podcastService.getPodcasts({
-          page,
-          limit: 10,
-          categoryId: selectedCategory?.id || categoryId,
-          sort: selectedSort.key
-        });
-      }
-
-      if (!mountedRef.current) return;
-
-      if (isRefresh || page === 1) {
-        setPodcasts(response.data);
-      } else {
-        setPodcasts(prev => [...prev, ...response.data]);
-      }
-
-      setCurrentPage(page);
-      setTotalPages(response.pagination.total_pages);
-      setHasMore(page < response.pagination.total_pages);
-
-    } catch (error: any) {
-      console.error('Error loading podcasts:', error);
-      if (mountedRef.current) {
-        Alert.alert('Lỗi', error.message || 'Không thể tải danh sách podcast');
-      }
-    } finally {
-      isLoadingRef.current = false;
-      if (mountedRef.current) {
-        setLoading(false);
-        setLoadingMore(false);
-        setRefreshing(false);
-        setSearchLoading(false);
-      }
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
     }
-  }, [searchActive, searchText, selectedSort, selectedCategory, categoryId]);
+
+    let response;
+    
+    if (searchActive && searchText.trim()) {
+      // Search mode - sử dụng hàm searchPodcastsWithSort mới
+      response = await podcastService.searchPodcastsWithSort({
+        query: searchText.trim(),
+        page,
+        limit: 10,
+        categoryId: selectedCategory?.id || categoryId,
+        status: 'bật', // Chỉ tìm kiếm podcast đã bật
+        sort: selectedSort.key === 'duration_asc' || selectedSort.key === 'duration_desc' 
+          ? 'newest' // API không hỗ trợ sort theo duration, fallback về newest
+          : selectedSort.key
+      });
+    } else {
+      // Normal mode with filters
+      response = await podcastService.getPodcasts({
+        page,
+        limit: 10,
+        categoryId: selectedCategory?.id || categoryId,
+        sort: selectedSort.key
+      });
+    }
+
+    if (!mountedRef.current) return;
+
+    if (isRefresh || page === 1) {
+      setPodcasts(response.data);
+    } else {
+      setPodcasts(prev => [...prev, ...response.data]);
+    }
+
+    setCurrentPage(page);
+    setTotalPages(response.pagination.total_pages);
+    setHasMore(page < response.pagination.total_pages);
+
+  } catch (error: any) {
+    console.error('Error loading podcasts:', error);
+    if (mountedRef.current) {
+      Alert.alert('Lỗi', error.message || 'Không thể tải danh sách podcast');
+    }
+  } finally {
+    isLoadingRef.current = false;
+    if (mountedRef.current) {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+      setSearchLoading(false);
+    }
+  }
+}, [searchActive, searchText, selectedSort, selectedCategory, categoryId]);
+
+
 
   // Create debounced search function outside of component render
   const debouncedSearch = useCallback(
