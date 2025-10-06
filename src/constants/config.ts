@@ -2,7 +2,9 @@ import Constants from 'expo-constants';
 
 const ENV = {
   dev: {
-    apiUrl: 'https://podcastserver-production.up.railway.app/api',
+    // apiUrl: 'https://podcastserver-production-732f.up.railway.app/api'
+    //apiUrl: 'http://localhost:8081/api',
+    apiUrl: 'https://apipodcastt.onrender.com/api',
     apiTimeout: 10000,
   },
   staging: {
